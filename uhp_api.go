@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 	stripe "github.com/stripe/stripe-go"
 )
@@ -23,9 +24,6 @@ type product struct {
 	name  string
 }
 
-// getProductsDB() (map[int]product, err) {
-//
-// }
 func getProducts() map[int]product {
 	// init test product
 	p1 := product{
@@ -59,17 +57,7 @@ func (s *server) handleCheckout() http.HandlerFunc {
 	}
 }
 
-// make server into http.Handler
-// func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-// 	s.router.ServeHTTP(w, r)
-// }
-
-// func main() {
-// 	if err := run(); err != nil {
-// 		fmt.Fprintf(os.Stderr, "%s\n", err)
-// 		os.Exit(1)
-// 	}
-// }
+// DB
 
 func main() {
 	err := godotenv.Load()
@@ -79,8 +67,13 @@ func main() {
 
 	stripe.Key = os.Getenv("STRIPE_KEY")
 
+	db, err := OpenDBConnection()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	s := &server{
-		// database
+		db:     db,
 		router: http.NewServeMux(),
 	}
 
