@@ -7,14 +7,14 @@ import (
 	"strconv"
 )
 
-var (
-	dbHost = os.Getenv("DB_HOST")
-	dbPort = os.Getenv("DB_PORT")
-	dbUser = os.Getenv("DB_USER")
-	dbName = os.Getenv("DB_NAME")
-)
-
 func OpenDBConnection() (*sql.DB, error) {
+	var (
+		dbHost = os.Getenv("DB_HOST")
+		dbPort = os.Getenv("DB_PORT")
+		dbUser = os.Getenv("DB_USER")
+		dbName = os.Getenv("DB_NAME")
+	)
+
 	dbPortInt, err := strconv.Atoi(dbPort)
 	if err != nil {
 		return nil, err
@@ -27,7 +27,6 @@ func OpenDBConnection() (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 
 	err = db.Ping()
 	if err != nil {

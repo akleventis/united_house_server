@@ -1,3 +1,4 @@
 .env
 *.txt
 1
+.DS_Store
