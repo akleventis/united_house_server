@@ -27,22 +27,43 @@ type lineItems struct {
 	Items []*uhp_db.Product `json:"items"`
 }
 
+const stripeBaseURL = "https://api.stripe.com"
+
 // handle get post request
 func (s *server) handleCheckout() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		var products lineItems
-		err := json.NewDecoder(req.Body).Decode(&products)
+		var items lineItems
+		err := json.NewDecoder(req.Body).Decode(&items)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		// go into db grab item by id
-		// if not enough quantity, return struct with quantity and bad request?
-		// subtract quanitty from db
-		// Grab item price and name
-		// add to line items array
-		// maybe build up the array before entering the checkout block below
-		// make sure to subtract quantity AFTER successful checkout!
+
+		var products []*uhp_db.Product
+		for _, v := range items.Items {
+			product, err := uhp_db.GetProductById(s.db, v.ID, v.Quantity)
+			if err != nil {
+				if err == uhp_db.ErrOutOfStock {
+					// TODO: how to send error message to front end?
+					http.Error(w, fmt.Sprintf("Oops, look like we only have %d %s(s) in stock, please update cart", product.Quantity, product.Name), http.StatusBadRequest)
+					return
+				}
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			products = append(products, product)
+		}
+
+		var checkoutLineItems []*stripe.CheckoutSessionLineItemParams
+		for _, v := range products {
+			item := &stripe.CheckoutSessionLineItemParams{
+				Name:     stripe.String(v.Name),
+				Amount:   stripe.Int64(int64(v.Price * 100)),
+				Currency: stripe.String("usd"),
+				Quantity: stripe.Int64(int64(v.Quantity)),
+			}
+			checkoutLineItems = append(checkoutLineItems, item)
+		}
 		params := &stripe.CheckoutSessionParams{
 			Mode:               stripe.String(string(stripe.CheckoutSessionModePayment)),
 			PaymentMethodTypes: []*string{stripe.String("card")},
@@ -50,16 +71,9 @@ func (s *server) handleCheckout() http.HandlerFunc {
 			CancelURL:          stripe.String("http://localhost:3000"),
 
 			// loop through and fill line items with product objects
-			LineItems: []*stripe.CheckoutSessionLineItemParams{
-				{
-					Name:     stripe.String("T-Shirt"),
-					Amount:   stripe.Int64(1 * 100),
-					Currency: stripe.String("usd"),
-					Quantity: stripe.Int64(2),
-				},
-			},
+			LineItems: checkoutLineItems,
 		}
-		s, err := session.New(params)
+		sesh, err := session.New(params)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -67,12 +81,24 @@ func (s *server) handleCheckout() http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 
 		resp := map[string]string{
-			"url": s.URL,
+			"url": sesh.URL,
 		}
 		jsonResp, err := json.Marshal(resp)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
+		}
+		// confirm payment went through, then subtract quantity from database
+		// https://stripe.com/docs/payments/payment-intents/verifying-status#handling-webhook-events
+		// seshID := sesh.ID
+
+		// reduce quanitity in database
+		for _, v := range products {
+			log.Info("PRODUCT: ", v)
+			if err := uhp_db.UpdateQuantity(s.db, v.ID, v.Quantity); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 		w.Write(jsonResp)
 		// http.Redirect(w, req, s.URL, http.StatusSeeOther)
