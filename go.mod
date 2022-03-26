@@ -11,6 +11,7 @@ require (
 	github.com/joho/godotenv v1.4.0
 	github.com/rs/cors v1.8.2
 	github.com/sirupsen/logrus v1.8.1
+	github.com/stripe/stripe-go v70.15.0+incompatible
 	github.com/stripe/stripe-go/v72 v72.95.0
 )
 
