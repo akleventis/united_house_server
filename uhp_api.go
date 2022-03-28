@@ -38,18 +38,18 @@ func (s *server) handleCheckout() http.HandlerFunc {
 			http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 		}
 		var items lineItems
+
 		err := json.NewDecoder(req.Body).Decode(&items)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-
 		var products []*uhp_db.Product
 		for _, v := range items.Items {
 			product, err := uhp_db.GetProductById(s.db, v.ID, v.Quantity)
 			if err != nil {
 				if err == uhp_db.ErrOutOfStock {
-					// TODO: how to send error message to front end?
+					// TODO: how to send error message to front end (for showing quantity purposes)?
 					log.Info("OUT OF STOCK")
 					http.Error(w, fmt.Sprintf("Oops, look like we only have %d %s(s) in stock, please update cart", product.Quantity, product.Name), http.StatusBadRequest)
 					return
@@ -64,7 +64,7 @@ func (s *server) handleCheckout() http.HandlerFunc {
 		var checkoutLineItems []*stripe.CheckoutSessionLineItemParams
 		for _, v := range products {
 			item := &stripe.CheckoutSessionLineItemParams{
-				Name:     stripe.String(v.Name),
+				Name:     stripe.String(string(v.ID)),
 				Amount:   stripe.Int64(int64(v.Price * 100)),
 				Currency: stripe.String("usd"),
 				Quantity: stripe.Int64(int64(v.Quantity)),
@@ -112,29 +112,17 @@ func (s *server) getProducts() http.HandlerFunc {
 			fmt.Println(v)
 		}
 		fmt.Println(products)
-
 	}
 }
 
-func updateInventory(items *stripe.LineItemList) {
-	for _, v := range items.Data {
-		log.Info(v)
+func (s *server) updateInventory(productID string, quantity int) error {
+	if err := uhp_db.UpdateQuantity(s.db, productID, quantity); err != nil {
+		return err
 	}
-	// var p uhp_db.Product
-	// for _, v := range items.Data {
-	// 	p.ID =
-	// 	p.Quantity = int(v.Quantity)
-
-	// }
-	// for _, v := range products {
-	// 	log.Info("PRODUCT: ", v)
-	// 	if err := uhp_db.UpdateQuantity(s.db, v.ID, v.Quantity); err != nil {
-	// 		http.Error(w, err.Error(), http.StatusInternalServerError)
-	// 		return
-	// 	}
-	// }
+	return nil
 }
 
+// Checkout Session Confirmation => Update Inventory
 func (s *server) handleWebhook() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		const MaxBodyBytes = int64(65536)
@@ -146,13 +134,12 @@ func (s *server) handleWebhook() http.HandlerFunc {
 			return
 		}
 
-		// This is your Stripe CLI webhook secret for testing your endpoint locally.
+		// Stripe CLI webhook secret for testing your endpoint locally.
 		endpointSecret := "whsec_997481b842ea0e014921893e6a5767e23bd7c32b18e2a424db9046a99268adb3"
 		// Pass the request body and Stripe-Signature header to ConstructEvent, along
 		// with the webhook signing key.
 		event, err := webhook.ConstructEvent(payload, req.Header.Get("Stripe-Signature"),
 			endpointSecret)
-
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error verifying webhook signature: %v\n", err)
 			w.WriteHeader(http.StatusBadRequest) // Return a 400 error on a bad signature
@@ -160,25 +147,34 @@ func (s *server) handleWebhook() http.HandlerFunc {
 		}
 
 		// Unmarshal the event data into an appropriate struct depending on its Type
-		switch event.Type {
-		case "checkout.session.completed":
-			log.Info("PAYMENT SUCCEEDED")
-			var session stripe.CheckoutSession
-			err = json.Unmarshal(event.Data.Raw, &session)
+		if event.Type == "checkout.session.completed" {
+			// Grab Session Data
+			var sesh stripe.CheckoutSession
+			err = json.Unmarshal(event.Data.Raw, &sesh)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error parsing webhook JSON: %v\n", err)
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
-			// TODO: Need to get data from lineitems in order for inventory management
-			// updateInventory(session.LineItems)
-			// log.Info(session.LineItems)
-		default:
-			fmt.Fprintf(os.Stderr, "Unhandled event type: %s\n", event.Type)
+
+			// Grab each session line items Product ID and Quantity
+			params := &stripe.CheckoutSessionListLineItemsParams{}
+			i := session.ListLineItems(sesh.ID, params)
+			for i.Next() {
+				li := i.LineItem()
+
+				id := li.Description
+				quantity := int(li.Quantity)
+
+				err = s.updateInventory(id, quantity)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "UPDATE INVENTORY ERROR: %v\n", err)
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+			}
 		}
-
 		w.WriteHeader(http.StatusOK)
-
 	}
 }
 

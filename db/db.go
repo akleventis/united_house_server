@@ -3,10 +3,13 @@ package db
 import (
 	"database/sql"
 	"errors"
+	"fmt"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type Product struct {
-	ID       int    `json:"id"`
+	ID       string `json:"id"`
 	Name     string `json:"name"`
 	Size     string `json:"size"`
 	Price    int    `json:"price"`
@@ -43,7 +46,7 @@ func GetProducts(db *sql.DB) ([]*Product, error) {
 	return products, nil
 }
 
-func GetProductById(db *sql.DB, id int, quantity int) (*Product, error) {
+func GetProductById(db *sql.DB, id string, quantity int) (*Product, error) {
 	var p Product
 
 	query := `SELECT * FROM merch WHERE id=$1 LIMIT 1;`
@@ -65,10 +68,14 @@ func GetProductById(db *sql.DB, id int, quantity int) (*Product, error) {
 	return &p, nil
 }
 
-func UpdateQuantity(db *sql.DB, id int, quantity int) error {
-	query := `UPDATE merch SET quantity = quantity - $1 WHERE id=$2;`
-	if _, err := db.Exec(query, quantity, id); err != nil {
+func UpdateQuantity(db *sql.DB, id string, quantity int) error {
+	query := fmt.Sprintf(`UPDATE merch SET quantity=quantity-%d WHERE id='%s';`, quantity, id)
+	log.Info(query)
+	if _, err := db.Exec(query); err != nil {
 		return ErrUpdateStock
 	}
+	// if _, err := db.Exec(query, quantity, id); err != nil {
+	// 	return ErrUpdateStock
+	// }
 	return nil
 }
