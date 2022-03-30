@@ -4,8 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type Product struct {
@@ -16,17 +14,20 @@ type Product struct {
 	Quantity int    `json:"quantity"`
 }
 
+// TODO: Global error variables?
 var (
 	ErrOutOfStock  = errors.New("OUT_OF_STOCK")
 	ErrUpdateStock = errors.New("UPDATE_STOCK_ERROR")
 )
 
-// returns array of all products
-func GetProducts(db *sql.DB) ([]*Product, error) {
+// TODO: An interface to call these methods on??
+
+// Returns an array of all products
+func (productDB *ProductDB) GetProducts() ([]*Product, error) {
 	products := make([]*Product, 0)
 
 	query := `SELECT * from merch;`
-	rows, err := db.Query(query)
+	rows, err := productDB.Query(query)
 	if err != nil {
 		return nil, err
 	}
@@ -46,11 +47,13 @@ func GetProducts(db *sql.DB) ([]*Product, error) {
 	return products, nil
 }
 
-func GetProductById(db *sql.DB, id string, quantity int) (*Product, error) {
+// GetProductByID retrieves a product by ID and requested quanitity
+// Returns product & error if requested quantity > amount in stock
+func (productDB *ProductDB) GetProductByID(id string, quantity int) (*Product, error) {
 	var p Product
 
 	query := `SELECT * FROM merch WHERE id=$1 LIMIT 1;`
-	err := db.QueryRow(query, id).Scan(&p.ID, &p.Name, &p.Size, &p.Price, &p.Quantity)
+	err := productDB.QueryRow(query, id).Scan(&p.ID, &p.Name, &p.Size, &p.Price, &p.Quantity)
 	if err != nil {
 		if err != sql.ErrNoRows {
 			return nil, err
@@ -68,14 +71,11 @@ func GetProductById(db *sql.DB, id string, quantity int) (*Product, error) {
 	return &p, nil
 }
 
-func UpdateQuantity(db *sql.DB, id string, quantity int) error {
+// UpdateQuantity reduces quantity in database using productID (primary key)
+func (productDB *ProductDB) UpdateQuantity(id string, quantity int) error {
 	query := fmt.Sprintf(`UPDATE merch SET quantity=quantity-%d WHERE id='%s';`, quantity, id)
-	log.Info(query)
-	if _, err := db.Exec(query); err != nil {
+	if _, err := productDB.Exec(query); err != nil {
 		return ErrUpdateStock
 	}
-	// if _, err := db.Exec(query, quantity, id); err != nil {
-	// 	return ErrUpdateStock
-	// }
 	return nil
 }

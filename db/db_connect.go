@@ -7,7 +7,12 @@ import (
 	"strconv"
 )
 
-func OpenDBConnection() (*sql.DB, error) {
+// create struct
+type ProductDB struct {
+	*sql.DB
+}
+
+func OpenDBConnection() (*ProductDB, error) {
 	var (
 		dbHost = os.Getenv("DB_HOST")
 		dbPort = os.Getenv("DB_PORT")
@@ -32,6 +37,9 @@ func OpenDBConnection() (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+	pDB := &ProductDB{
+		db,
+	}
 
-	return db, nil
+	return pDB, nil
 }
