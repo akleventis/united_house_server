@@ -15,10 +15,7 @@ type Product struct {
 }
 
 // TODO: Global error variables?
-var (
-	ErrOutOfStock  = errors.New("OUT_OF_STOCK")
-	ErrUpdateStock = errors.New("UPDATE_STOCK_ERROR")
-)
+var ErrOutOfStock = errors.New("OUT_OF_STOCK")
 
 // TODO: An interface to call these methods on??
 
@@ -75,7 +72,7 @@ func (productDB *ProductDB) GetProductByID(id string, quantity int) (*Product, e
 func (productDB *ProductDB) UpdateQuantity(id string, quantity int) error {
 	query := fmt.Sprintf(`UPDATE merch SET quantity=quantity-%d WHERE id='%s';`, quantity, id)
 	if _, err := productDB.Exec(query); err != nil {
-		return ErrUpdateStock
+		return err
 	}
 	return nil
 }

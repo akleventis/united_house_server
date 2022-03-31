@@ -18,7 +18,6 @@ type lineItems struct {
 	Items []*uhp_db.Product `json:"items"`
 }
 
-// handle get post request
 func (s *server) handleCheckout() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		if req.Method != "POST" {
@@ -38,7 +37,14 @@ func (s *server) handleCheckout() http.HandlerFunc {
 			product, err := s.db.GetProductByID(v.ID, v.Quantity)
 			if err != nil {
 				if err == uhp_db.ErrOutOfStock {
-					http.Error(w, fmt.Sprintf("Oops, look like we only have %d %s(s) in stock, please update cart", product.Quantity, product.Name), http.StatusBadRequest)
+					var message string
+					switch product.Quantity {
+					case 0:
+						message = fmt.Sprintf("%s %s is out of stock. Please update cart", product.Size, product.Name)
+					default:
+						message = fmt.Sprintf("Only %d %s %s(s), in stock. Please update cart", product.Quantity, product.Size, product.Name)
+					}
+					http.Error(w, message, http.StatusBadRequest)
 					return
 				}
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -51,10 +57,11 @@ func (s *server) handleCheckout() http.HandlerFunc {
 		var checkoutLineItems []*stripe.CheckoutSessionLineItemParams
 		for _, v := range products {
 			item := &stripe.CheckoutSessionLineItemParams{
-				Name:     stripe.String(string(v.ID)),
-				Amount:   stripe.Int64(int64(v.Price * 100)),
-				Currency: stripe.String("usd"),
-				Quantity: stripe.Int64(int64(v.Quantity)),
+				Name:        stripe.String(string(v.Name)),
+				Description: stripe.String(string(v.ID)), // need to pass in product_id for webhook update database inventory
+				Amount:      stripe.Int64(int64(v.Price * 100)),
+				Currency:    stripe.String("usd"),
+				Quantity:    stripe.Int64(int64(v.Quantity)),
 			}
 			checkoutLineItems = append(checkoutLineItems, item)
 		}
@@ -73,15 +80,13 @@ func (s *server) handleCheckout() http.HandlerFunc {
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-
-		resp := map[string]string{"url": sesh.URL}
-
-		jsonResp, err := json.Marshal(resp)
+		jsonResp, err := json.Marshal(map[string]string{"url": sesh.URL})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
+		w.Header().Set("Content-Type", "application/json")
 		w.Write(jsonResp)
 	}
 }
