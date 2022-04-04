@@ -14,22 +14,6 @@ type Product struct {
 	Quantity int    `json:"quantity"`
 }
 
-// type MerchStore interface {
-// 	GetProducts() ([]*Product, error)
-// 	GetProductByID(id string, quantity int) (*Product, error)
-// 	UpdateQuantity(id string, quantity int) error
-// }
-
-// type MerchService struct {
-// 	store MerchStore
-// }
-
-// func NewMerchService(m MerchStore) *MerchService {
-// 	return &MerchService{
-// 		store: m,
-// 	}
-// }
-
 var ErrOutOfStock = errors.New("OUT_OF_STOCK")
 
 // Returns an array of all products
