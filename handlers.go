@@ -24,6 +24,7 @@ func (s *server) handleCheckout() http.HandlerFunc {
 			http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 			return
 		}
+
 		var items lineItems
 
 		err := json.NewDecoder(req.Body).Decode(&items)

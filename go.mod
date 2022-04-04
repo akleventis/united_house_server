@@ -13,6 +13,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stripe/stripe-go v70.15.0+incompatible
 	github.com/stripe/stripe-go/v72 v72.95.0
+	golang.org/x/time v0.0.0-20220224211638-0e9765cccd65
 )
 
 replace github.com/akleventis/united_house_server => ../united_house_go
