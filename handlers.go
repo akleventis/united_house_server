@@ -18,6 +18,10 @@ type lineItems struct {
 	Items []*uhp_db.Product `json:"items"`
 }
 
+const localhost = "http://localhost:3000"
+
+// const livehost = ""
+
 func (s *server) handleCheckout() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		if req.Method != "POST" {
@@ -71,8 +75,8 @@ func (s *server) handleCheckout() http.HandlerFunc {
 		params := &stripe.CheckoutSessionParams{
 			Mode:               stripe.String(string(stripe.CheckoutSessionModePayment)),
 			PaymentMethodTypes: []*string{stripe.String("card")},
-			SuccessURL:         stripe.String("http://localhost:3000"),
-			CancelURL:          stripe.String("http://localhost:3000"),
+			SuccessURL:         stripe.String(localhost),
+			CancelURL:          stripe.String(localhost),
 			LineItems:          checkoutLineItems,
 		}
 		sesh, err := session.New(params)

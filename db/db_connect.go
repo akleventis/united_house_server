@@ -43,3 +43,11 @@ func OpenDBConnection() (*ProductDB, error) {
 
 	return pDB, nil
 }
+
+// CREATE TABLE IF NOT EXISTS merch_t (
+// 	id VARCHAR( 50 ) PRIMARY KEY NOT NULL,
+// 	name VARCHAR( 50 ) NOT NULL,
+// 	size VARCHAR( 50 ) NOT NULL,
+// 	price INT NOT NULL,
+// 	quantity INT NOT NULL
+//  )

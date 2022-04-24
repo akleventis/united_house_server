@@ -21,6 +21,7 @@ func init() {
 	go cleanUp()
 }
 
+// Limit IP's => 20 requests per minute
 func getIP(ipAddress string) *rate.Limiter {
 	mu.Lock()
 	defer mu.Unlock()
@@ -40,13 +41,14 @@ func getIP(ipAddress string) *rate.Limiter {
 	return value.limiter
 }
 
+// If ip hasn't been seen for over a minute, remove the map entry
 func cleanUp() {
 	for {
 		time.Sleep(time.Minute)
 
 		mu.Lock()
 		for i, value := range ips {
-			if time.Since(value.lastSeen) > 3*time.Minute {
+			if time.Since(value.lastSeen) > time.Minute {
 				delete(ips, i)
 			}
 		}
