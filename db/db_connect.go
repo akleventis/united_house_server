@@ -1,15 +1,33 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
+	"time"
 )
 
 // create struct
 type ProductDB struct {
 	*sql.DB
+}
+
+func (db *ProductDB) createMerchTable() error {
+	// create table
+	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS merch_t (
+		id VARCHAR( 50 ) PRIMARY KEY NOT NULL,
+		name VARCHAR( 50 ) NOT NULL,
+		size VARCHAR( 50 ) NOT NULL,
+		price INT NOT NULL,
+		quantity INT NOT NULL)`)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func OpenDBConnection() (*ProductDB, error) {
@@ -37,17 +55,27 @@ func OpenDBConnection() (*ProductDB, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	db.SetMaxIdleConns(20)
+	db.SetMaxOpenConns(20)
+	db.SetConnMaxLifetime(time.Minute * 5)
+
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+	err = db.PingContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("%s database connected", dbName)
+
 	pDB := &ProductDB{
 		db,
 	}
 
+	err = pDB.createMerchTable()
+	if err != nil {
+		return nil, err
+	}
+
 	return pDB, nil
 }
-
-// CREATE TABLE IF NOT EXISTS merch_t (
-// 	id VARCHAR( 50 ) PRIMARY KEY NOT NULL,
-// 	name VARCHAR( 50 ) NOT NULL,
-// 	size VARCHAR( 50 ) NOT NULL,
-// 	price INT NOT NULL,
-// 	quantity INT NOT NULL
-//  )
