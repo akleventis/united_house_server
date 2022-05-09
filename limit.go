@@ -56,6 +56,7 @@ func cleanUp() {
 	}
 }
 
+// ip address rate limiting
 func limit(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ip, _, err := net.SplitHostPort(r.RemoteAddr)

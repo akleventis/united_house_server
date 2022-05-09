@@ -15,6 +15,7 @@ type Product struct {
 }
 
 var ErrOutOfStock = errors.New("OUT_OF_STOCK")
+var ErrDB = errors.New("DB_ERROR")
 
 // Desc merch_t
 // Column  |         Type          | Collation | Nullable | Default
@@ -52,8 +53,7 @@ func (productDB *ProductDB) GetProducts() ([]*Product, error) {
 	return products, nil
 }
 
-// GetProductByID retrieves a product by ID and requested quanitity
-// & returns product & error if requested quantity > amount in stock
+// GetProductByID retrieves a product by ID and requested quanitity. Returns error if quantity can not be fulfilled
 func (productDB *ProductDB) GetProductByID(id string, quantity int) (*Product, error) {
 	var p Product
 
@@ -61,7 +61,7 @@ func (productDB *ProductDB) GetProductByID(id string, quantity int) (*Product, e
 	err := productDB.QueryRow(query, id).Scan(&p.ID, &p.Name, &p.Size, &p.Price, &p.Quantity)
 	if err != nil {
 		if err != sql.ErrNoRows {
-			return nil, err
+			return nil, ErrDB
 		}
 		return nil, nil
 	}
