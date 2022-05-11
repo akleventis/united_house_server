@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"os"
 
-	uhp_db "github.com/akleventis/united_house_server/db"
+	"github.com/akleventis/united_house_server/merchdb"
 	log "github.com/sirupsen/logrus"
 	stripe "github.com/stripe/stripe-go/v72"
 	"github.com/stripe/stripe-go/v72/checkout/session"
@@ -16,16 +16,16 @@ import (
 )
 
 type lineItems struct {
-	Items []*uhp_db.Product `json:"items"`
+	Items []*merchdb.Product `json:"items"`
 }
 
 // createProducts verifies items are in stock and returns the products array
-func (s *server) createProducts(items lineItems) ([]*uhp_db.Product, error) {
-	var products []*uhp_db.Product
+func (s *server) createProducts(items lineItems) ([]*merchdb.Product, error) {
+	var products []*merchdb.Product
 	for _, v := range items.Items {
 		product, err := s.db.GetProductByID(v.ID, v.Quantity)
 		if err != nil {
-			if err == uhp_db.ErrOutOfStock {
+			if err == merchdb.ErrOutOfStock {
 				var message string
 				switch product.Quantity {
 				case 0:
@@ -35,7 +35,7 @@ func (s *server) createProducts(items lineItems) ([]*uhp_db.Product, error) {
 				}
 				return nil, errors.New(message)
 			}
-			return nil, uhp_db.ErrDB
+			return nil, merchdb.ErrDB
 		}
 		products = append(products, product)
 	}
@@ -43,7 +43,7 @@ func (s *server) createProducts(items lineItems) ([]*uhp_db.Product, error) {
 }
 
 // createLineItems converts products array to stripe LineItems
-func createLineItems(products []*uhp_db.Product) []*stripe.CheckoutSessionLineItemParams {
+func createLineItems(products []*merchdb.Product) []*stripe.CheckoutSessionLineItemParams {
 	var cli []*stripe.CheckoutSessionLineItemParams
 	for _, v := range products {
 		item := &stripe.CheckoutSessionLineItemParams{
@@ -93,7 +93,7 @@ func (s *server) handleCheckout() http.HandlerFunc {
 		products, err := s.createProducts(items)
 		if err != nil {
 			switch err {
-			case uhp_db.ErrDB:
+			case merchdb.ErrDB:
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			default:
 				http.Error(w, fmt.Sprint(err), http.StatusBadRequest)

@@ -1,4 +1,4 @@
-package db
+package merchdb
 
 import (
 	"database/sql"

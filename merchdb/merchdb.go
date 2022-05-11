@@ -1,4 +1,4 @@
-package db
+package merchdb
 
 import (
 	"context"
@@ -9,6 +9,12 @@ import (
 	"strconv"
 	"time"
 )
+
+type Datastore interface {
+	GetProducts() ([]*Product, error)
+	GetProductByID(id string, quantity int) (*Product, error)
+	UpdateQuantity(id string, quantity int) error
+}
 
 // create struct
 type ProductDB struct {
@@ -30,7 +36,7 @@ func (db *ProductDB) createMerchTable() error {
 	return nil
 }
 
-func OpenDBConnection() (*ProductDB, error) {
+func Open() (*ProductDB, error) {
 	var (
 		dbHost = os.Getenv("DB_HOST")
 		dbPort = os.Getenv("DB_PORT")

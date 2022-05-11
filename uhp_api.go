@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"os"
 
-	uhp_db "github.com/akleventis/united_house_server/db"
+	"github.com/akleventis/united_house_server/merchdb"
 
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -13,9 +13,8 @@ import (
 	stripe "github.com/stripe/stripe-go/v72"
 )
 
-// server struct (https://pace.dev/blog/2018/05/09/how-I-write-http-services-after-eight-years.html)
 type server struct {
-	db     *uhp_db.ProductDB
+	db     merchdb.Datastore
 	router *http.ServeMux
 }
 
@@ -27,14 +26,14 @@ func main() {
 
 	stripe.Key = os.Getenv("STRIPE_KEY")
 
-	pDB, err := uhp_db.OpenDBConnection()
+	db, err := merchdb.Open()
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer pDB.DB.Close()
+	defer db.DB.Close()
 
 	s := &server{
-		db:     pDB,
+		db:     db,
 		router: http.NewServeMux(),
 	}
 
