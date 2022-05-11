@@ -19,8 +19,8 @@ type lineItems struct {
 	Items []*uhp_db.Product `json:"items"`
 }
 
-// createLineItems verifies items are in stock and returns a product array
-func (s *server) createLineItems(items lineItems) ([]*uhp_db.Product, error) {
+// createProducts verifies items are in stock and returns the products array
+func (s *server) createProducts(items lineItems) ([]*uhp_db.Product, error) {
 	var products []*uhp_db.Product
 	for _, v := range items.Items {
 		product, err := s.db.GetProductByID(v.ID, v.Quantity)
@@ -42,7 +42,7 @@ func (s *server) createLineItems(items lineItems) ([]*uhp_db.Product, error) {
 	return products, nil
 }
 
-// createLineItems converts product array to stripe LineItems
+// createLineItems converts products array to stripe LineItems
 func createLineItems(products []*uhp_db.Product) []*stripe.CheckoutSessionLineItemParams {
 	var cli []*stripe.CheckoutSessionLineItemParams
 	for _, v := range products {
@@ -90,7 +90,7 @@ func (s *server) handleCheckout() http.HandlerFunc {
 			return
 		}
 
-		products, err := s.createLineItems(items)
+		products, err := s.createProducts(items)
 		if err != nil {
 			switch err {
 			case uhp_db.ErrDB:
@@ -164,13 +164,13 @@ func (s *server) handleWebhook() http.HandlerFunc {
 
 		// Stripe CLI webhook secret for testing your endpoint locally.
 		// create for prod https://dashboard.stripe.com/webhooks
-		endpointSecret := "whsec_997481b842ea0e014921893e6a5767e23bd7c32b18e2a424db9046a99268adb3"
+		endpointSecret := os.Getenv("WHSEC")
 		// Pass the request body and Stripe-Signature header to ConstructEvent, along with the webhook signing key.
 		event, err := webhook.ConstructEvent(payload, req.Header.Get("Stripe-Signature"),
 			endpointSecret)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error verifying webhook signature: %v\n", err)
-			http.Error(w, err.Error(), http.StatusBadRequest) // Return a 400 error on a bad signature
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
