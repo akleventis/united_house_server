@@ -37,9 +37,9 @@ func main() {
 		router: http.NewServeMux(),
 	}
 
-	s.router.HandleFunc("/checkout", limit(s.handleCheckout()))
-	s.router.HandleFunc("/products", limit(s.getProducts()))
-	s.router.HandleFunc("/webhook", limit(s.handleWebhook()))
+	s.router.HandleFunc("/checkout", limit(s.HandleCheckout()))
+	s.router.HandleFunc("/products", limit(s.GetProducts()))
+	s.router.HandleFunc("/webhook", limit(s.HandleWebhook()))
 
 	handler := cors.Default().Handler(s.router)
 	http.ListenAndServe(":5001", handler)

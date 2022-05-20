@@ -75,7 +75,7 @@ func createCheckoutSession(cli []*stripe.CheckoutSessionLineItemParams) (*stripe
 }
 
 // handleCheckout receives array of items from client, verifies items are in stock and grabs from database, creates checkout session and returns stripe redirect url
-func (s *server) handleCheckout() http.HandlerFunc {
+func (s *server) HandleCheckout() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		if req.Method != "POST" {
 			http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
@@ -122,7 +122,7 @@ func (s *server) handleCheckout() http.HandlerFunc {
 }
 
 // getProducts returns json array of all products
-func (s *server) getProducts() http.HandlerFunc {
+func (s *server) GetProducts() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		if req.Method != "GET" {
 			http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
@@ -151,7 +151,7 @@ func (s *server) updateInventory(productID string, quantity int) error {
 }
 
 // handleWebhook() listens for Checkout Session Confirmation then Update Inventory accordingly
-func (s *server) handleWebhook() http.HandlerFunc {
+func (s *server) HandleWebhook() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		const MaxBodyBytes = int64(65536)
 		req.Body = http.MaxBytesReader(w, req.Body, MaxBodyBytes)
