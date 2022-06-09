@@ -4,7 +4,7 @@ go 1.17
 
 require github.com/lib/pq v1.10.4
 
-require golang.org/x/sys v0.0.0-20200323222414-85ca7c5b95cd // indirect
+require golang.org/x/sys v0.0.0-20220519141025-dcacdad47464 // indirect
 
 require (
 	github.com/akleventis/united_house_server v0.0.0-20220324025155-7a5ffcda5065

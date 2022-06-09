@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/akleventis/united_house_server/merchdb"
+	rl "github.com/akleventis/united_house_server/ratelimit"
 
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -37,9 +38,9 @@ func main() {
 		router: http.NewServeMux(),
 	}
 
-	s.router.HandleFunc("/checkout", limit(s.HandleCheckout()))
-	s.router.HandleFunc("/products", limit(s.GetProducts()))
-	s.router.HandleFunc("/webhook", limit(s.HandleWebhook()))
+	s.router.HandleFunc("/checkout", rl.Limit(s.HandleCheckout()))
+	s.router.HandleFunc("/products", rl.Limit(s.GetProducts()))
+	s.router.HandleFunc("/webhook", rl.Limit(s.HandleWebhook()))
 
 	handler := cors.Default().Handler(s.router)
 	http.ListenAndServe(":5001", handler)
