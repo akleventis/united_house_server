@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/akleventis/united_house_server/merchdb"
 	log "github.com/sirupsen/logrus"
@@ -23,7 +24,7 @@ type lineItems struct {
 func (s *server) createProducts(items lineItems) ([]*merchdb.Product, error) {
 	var products []*merchdb.Product
 	for _, v := range items.Items {
-		product, err := s.db.GetProductByID(v.ID, v.Quantity)
+		product, err := s.db.GetProductQuantity(v.ID, v.Quantity)
 		if err != nil {
 			if err == merchdb.ErrOutOfStock {
 				var message string
@@ -205,3 +206,61 @@ func (s *server) HandleWebhook() http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 	}
 }
+
+// ADMIN ONLY //
+
+func (s *server) UpdateProduct() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		reqToken := r.Header.Get("Authorization")
+		splitToken := strings.Split(reqToken, "Bearer")
+		if len(splitToken) != 2 {
+			http.Error(w, "Invalid token format", http.StatusBadRequest)
+			return
+		}
+
+		reqToken = strings.TrimSpace(splitToken[1])
+		auth := os.Getenv("BEARER")
+		if reqToken != auth {
+			http.Error(w, "Invalid Token", http.StatusForbidden)
+			return
+		}
+
+		var p merchdb.Product
+		if err := json.NewDecoder(r.Body).Decode(p); err != nil {
+			http.Error(w, "json error", http.StatusBadRequest)
+			return
+		}
+		if p.ID == "" {
+			http.Error(w, "product ID required", http.StatusBadRequest)
+			return
+		}
+
+		updateProduct, err := s.db.GetProductById(p.ID)
+		if err != nil {
+			http.Error(w, "db error", http.StatusInternalServerError)
+			return
+		}
+
+		if p.Name != "" {
+			updateProduct.Name = p.Name
+		}
+		if p.Price != updateProduct.Price {
+			updateProduct.Price = p.Price
+		}
+		if p.Quantity != updateProduct.Quantity {
+			updateProduct.Quantity = p.Quantity
+		}
+		if p.Size != "" {
+			updateProduct.Size = p.Size
+		}
+		// TODO: INSERT INTO DB METHOD
+	}
+}
+
+// type Product struct {
+// 	ID       string `json:"id"`
+// 	Name     string `json:"name"`
+// 	Size     string `json:"size"`
+// 	Price    int    `json:"price"`
+// 	Quantity int    `json:"quantity"`
+// }

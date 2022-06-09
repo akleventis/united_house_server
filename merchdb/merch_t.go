@@ -53,9 +53,9 @@ func (productDB *ProductDB) GetProducts() ([]*Product, error) {
 	return products, nil
 }
 
-// GetProductByID retrieves a product by ID and requested quanitity. Returns error if quantity can not be fulfilled
-func (productDB *ProductDB) GetProductByID(id string, quantity int) (*Product, error) {
-	var p Product
+// GetProductQuantity retrieves a product by ID and requested quanitity. Returns error if quantity can not be fulfilled
+func (productDB *ProductDB) GetProductQuantity(id string, quantity int) (*Product, error) {
+	var p *Product
 
 	query := `SELECT * FROM merch_t WHERE id=$1 LIMIT 1;`
 	err := productDB.QueryRow(query, id).Scan(&p.ID, &p.Name, &p.Size, &p.Price, &p.Quantity)
@@ -68,12 +68,12 @@ func (productDB *ProductDB) GetProductByID(id string, quantity int) (*Product, e
 
 	// if req quantity > in stock return product and error so we can tell front end how much in-stock
 	if p.Quantity < quantity {
-		return &p, ErrOutOfStock
+		return p, ErrOutOfStock
 	}
 
 	p.Quantity = quantity
 
-	return &p, nil
+	return p, nil
 }
 
 // UpdateQuantity reduces quantity in database using productID (primary key)
@@ -83,4 +83,18 @@ func (productDB *ProductDB) UpdateQuantity(id string, quantity int) error {
 		return err
 	}
 	return nil
+}
+
+func (productDB *ProductDB) GetProductById(id string) (*Product, error) {
+	var p *Product
+
+	query := `SELECT * FROM merch_t WHERE id=$1 LIMIT 1;`
+	err := productDB.QueryRow(query, id).Scan(&p.ID, &p.Name, &p.Size, &p.Price, &p.Quantity)
+	if err != nil {
+		if err != sql.ErrNoRows {
+			return nil, ErrDB
+		}
+		return nil, nil
+	}
+	return p, nil
 }
