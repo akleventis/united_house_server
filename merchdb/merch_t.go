@@ -28,6 +28,31 @@ var ErrDB = errors.New("DB_ERROR")
 // Indexes:
 //   "merch_pkey" PRIMARY KEY, btree (id)
 
+// Get returns a product using product_id
+func (productDB *ProductDB) Get(id string) (*Product, error) {
+	var p *Product
+
+	query := `SELECT * from merch_t where id=$1 LIMIT 1;`
+	err := productDB.QueryRow(query, id).Scan(&p.ID, &p.Name, &p.Size, &p.Price, &p.Quantity)
+	if err != nil {
+		if err != sql.ErrNoRows {
+			return nil, ErrDB
+		}
+		return nil, nil
+	}
+	return p, nil
+}
+
+// Update will update a product using product_id
+func (productDB *ProductDB) Update(p *Product) error {
+	query := fmt.Sprintf(`UPDATE merch_t SET name='%s' size='%s' price='%d' quantity='%d' WHERE id='%s';`, p.Name, p.Size, p.Price, p.Quantity, p.ID)
+
+	if _, err := productDB.Exec(query); err != nil {
+		return err
+	}
+	return nil
+}
+
 // GetProducts returns an array of all products
 func (productDB *ProductDB) GetProducts() ([]*Product, error) {
 	products := make([]*Product, 0)
@@ -39,12 +64,12 @@ func (productDB *ProductDB) GetProducts() ([]*Product, error) {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		product := Product{}
-		err := rows.Scan(&product.ID, &product.Name, &product.Size, &product.Price, &product.Quantity)
+		p := Product{}
+		err := rows.Scan(&p.ID, &p.Name, &p.Size, &p.Price, &p.Quantity)
 		if err != nil {
 			return nil, err
 		}
-		products = append(products, &product)
+		products = append(products, &p)
 	}
 	err = rows.Err()
 	if err != nil {
@@ -53,8 +78,8 @@ func (productDB *ProductDB) GetProducts() ([]*Product, error) {
 	return products, nil
 }
 
-// GetProductQuantity retrieves a product by ID and requested quanitity. Returns error if quantity can not be fulfilled
-func (productDB *ProductDB) GetProductQuantity(id string, quantity int) (*Product, error) {
+// GetProductOrder retrieves a product by ID and verifies order can be fulfilled. Returns error if quantity can not be fulfilled
+func (productDB *ProductDB) GetProductOrder(id string, quantity int) (*Product, error) {
 	var p *Product
 
 	query := `SELECT * FROM merch_t WHERE id=$1 LIMIT 1;`
@@ -70,13 +95,12 @@ func (productDB *ProductDB) GetProductQuantity(id string, quantity int) (*Produc
 	if p.Quantity < quantity {
 		return p, ErrOutOfStock
 	}
-
 	p.Quantity = quantity
 
 	return p, nil
 }
 
-// UpdateQuantity reduces quantity in database using productID (primary key)
+// UpdateQuantity reduces quantity in database using product_id
 func (productDB *ProductDB) UpdateQuantity(id string, quantity int) error {
 	query := fmt.Sprintf(`UPDATE merch_t SET quantity=quantity-%d WHERE id='%s';`, quantity, id)
 	if _, err := productDB.Exec(query); err != nil {

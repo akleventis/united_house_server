@@ -12,9 +12,10 @@ import (
 
 type Datastore interface {
 	GetProducts() ([]*Product, error)
-	GetProductQuantity(id string, quantity int) (*Product, error)
+	GetProductOrder(id string, quantity int) (*Product, error)
 	UpdateQuantity(id string, quantity int) error
 	GetProductById(id string) (*Product, error)
+	Update(p *Product) error
 }
 
 // create struct

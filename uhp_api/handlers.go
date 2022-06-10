@@ -24,7 +24,7 @@ type lineItems struct {
 func (s *server) createProducts(items lineItems) ([]*merchdb.Product, error) {
 	var products []*merchdb.Product
 	for _, v := range items.Items {
-		product, err := s.db.GetProductQuantity(v.ID, v.Quantity)
+		product, err := s.db.GetProductOrder(v.ID, v.Quantity)
 		if err != nil {
 			if err == merchdb.ErrOutOfStock {
 				var message string
@@ -73,6 +73,14 @@ func createCheckoutSession(cli []*stripe.CheckoutSessionLineItemParams) (*stripe
 		return nil, err
 	}
 	return sesh, nil
+}
+
+// updateInventory is a helper function for reducing inventory upon successful checkout session
+func (s *server) updateInventory(productID string, quantity int) error {
+	if err := s.db.UpdateQuantity(productID, quantity); err != nil {
+		return err
+	}
+	return nil
 }
 
 // handleCheckout receives array of items from client, verifies items are in stock and grabs from database, creates checkout session and returns stripe redirect url
@@ -141,14 +149,6 @@ func (s *server) GetProducts() http.HandlerFunc {
 		}
 		w.Write(jsonResp)
 	}
-}
-
-// updateInventory is a helper function for reducing inventory upon successful checkout session
-func (s *server) updateInventory(productID string, quantity int) error {
-	if err := s.db.UpdateQuantity(productID, quantity); err != nil {
-		return err
-	}
-	return nil
 }
 
 // handleWebhook() listens for Checkout Session Confirmation then Update Inventory accordingly
@@ -225,7 +225,7 @@ func (s *server) UpdateProduct() http.HandlerFunc {
 			return
 		}
 
-		var p merchdb.Product
+		var p *merchdb.Product
 		if err := json.NewDecoder(r.Body).Decode(p); err != nil {
 			http.Error(w, "json error", http.StatusBadRequest)
 			return
@@ -253,14 +253,18 @@ func (s *server) UpdateProduct() http.HandlerFunc {
 		if p.Size != "" {
 			updateProduct.Size = p.Size
 		}
-		// TODO: INSERT INTO DB METHOD
+
+		if err := s.db.Update(p); err != nil {
+			http.Error(w, "db error", http.StatusInternalServerError)
+			return
+		}
+
+		jsonResp, err := json.Marshal(p)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		// TODO: research responses
+		w.Write(jsonResp)
 	}
 }
-
-// type Product struct {
-// 	ID       string `json:"id"`
-// 	Name     string `json:"name"`
-// 	Size     string `json:"size"`
-// 	Price    int    `json:"price"`
-// 	Quantity int    `json:"quantity"`
-// }
