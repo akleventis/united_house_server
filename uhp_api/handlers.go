@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/akleventis/united_house_server/merchdb"
-	log "github.com/sirupsen/logrus"
 	stripe "github.com/stripe/stripe-go/v72"
 	"github.com/stripe/stripe-go/v72/checkout/session"
 	webhook "github.com/stripe/stripe-go/webhook"
@@ -18,6 +17,21 @@ import (
 
 type lineItems struct {
 	Items []*merchdb.Product `json:"items"`
+}
+
+type sessionURL struct {
+	Url string `json:"url"`
+}
+
+func resError(w http.ResponseWriter, code int, message string) {
+	resJSON(w, code, map[string]string{"error": message})
+}
+
+func resJSON(w http.ResponseWriter, code int, text interface{}) {
+	r, _ := json.Marshal(text)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	w.Write(r)
 }
 
 // createProducts verifies items are in stock and returns the products array
@@ -119,17 +133,22 @@ func (s *server) HandleCheckout() http.HandlerFunc {
 		}
 
 		// Send redirect URL back to client
-		jsonResp, err := json.Marshal(map[string]string{"url": sesh.URL})
+		url := &sessionURL{
+			Url: sesh.URL,
+		}
+
+		sessionURL, err := json.Marshal(url)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(jsonResp)
+		w.Write(sessionURL)
 	}
 }
 
+// TODO TEST
 // getProducts returns json array of all products
 func (s *server) GetProducts() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
@@ -139,7 +158,8 @@ func (s *server) GetProducts() http.HandlerFunc {
 		}
 		products, err := s.db.GetProducts()
 		if err != nil {
-			log.Fatal(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
 		jsonResp, err := json.Marshal(products)
@@ -148,6 +168,7 @@ func (s *server) GetProducts() http.HandlerFunc {
 			return
 		}
 		w.Write(jsonResp)
+		// TODO: json response function
 	}
 }
 
