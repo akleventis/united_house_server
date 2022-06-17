@@ -6,9 +6,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"strings"
 
+	e "github.com/akleventis/united_house_server/errors"
 	"github.com/akleventis/united_house_server/merchdb"
+	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	stripe "github.com/stripe/stripe-go/v72"
 	"github.com/stripe/stripe-go/v72/checkout/session"
@@ -20,7 +21,11 @@ type lineItems struct {
 }
 
 func apiResponse(w http.ResponseWriter, code int, obj interface{}) {
-	r, _ := json.Marshal(obj)
+	r, err := json.Marshal(obj)
+	if err != nil {
+		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	w.Write(r)
@@ -32,8 +37,8 @@ func (s *server) fulfillOrder(items lineItems) ([]*merchdb.Product, error) {
 	for _, v := range items.Items {
 		p, err := s.db.GetOrder(v.ID, v.Quantity)
 		if err != nil {
-			if err == merchdb.ErrOutOfStock && p != nil {
-				return []*merchdb.Product{p}, merchdb.ErrOutOfStock
+			if err == e.ErrOutOfStock && p != nil {
+				return []*merchdb.Product{p}, e.ErrOutOfStock
 			}
 			return nil, err
 		}
@@ -77,16 +82,11 @@ func createCheckoutSession(cli []*stripe.CheckoutSessionLineItemParams) (*stripe
 // handleCheckout receives array of items from client and returns a stripe checkout redirect url
 func (s *server) HandleCheckout() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		if req.Method != "POST" {
-			http.Error(w, "INVALID_REQUEST_METHOD", http.StatusMethodNotAllowed)
-			return
-		}
-
 		var items lineItems
 
 		err := json.NewDecoder(req.Body).Decode(&items)
 		if err != nil {
-			http.Error(w, "INVALID_JSON", http.StatusBadRequest)
+			http.Error(w, e.ErrInvalidArgJsonBody.Error(), http.StatusBadRequest)
 			return
 		}
 
@@ -96,11 +96,11 @@ func (s *server) HandleCheckout() http.HandlerFunc {
 		// 				message := fmt.Sprintf("Only %d %s %s(s), in stock. Please update cart", p.Quantity, p.Size, p.Name)
 		// 				message = fmt.Sprintf("%s %s is out of stock. Please update cart", p.Size, p.Name)
 		if err != nil {
-			if err == merchdb.ErrOutOfStock && len(products) > 0 {
+			if err == e.ErrOutOfStock && len(products) > 0 {
 				apiResponse(w, http.StatusAccepted, products[0]) // one product should exist, have front end deal with string logic
 				return
 			}
-			http.Error(w, "INTERNAL_ERROR", http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -126,14 +126,9 @@ func (s *server) HandleCheckout() http.HandlerFunc {
 // getProducts returns json array of all products
 func (s *server) GetProducts() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		if req.Method != "GET" {
-			http.Error(w, "INVALID_REQUEST_METHOD", http.StatusMethodNotAllowed)
-			return
-		}
-
 		products, err := s.db.GetProducts()
 		if err != nil {
-			http.Error(w, "DB_ERROR", http.StatusInternalServerError)
+			http.Error(w, e.ErrDB.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -141,65 +136,99 @@ func (s *server) GetProducts() http.HandlerFunc {
 	}
 }
 
-// ADMIN ONLY //
-
-// PUT
-func (s *server) UpdateProduct() http.HandlerFunc {
+// ADMIN ONLY: GetProduct retrieves a product using and id
+func (s *server) GetProduct() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "PUT" {
-			http.Error(w, "INVALID_REQUEST_METHOD", http.StatusMethodNotAllowed)
+		vars := mux.Vars(r)
+		if vars == nil {
+			http.Error(w, e.ErrInvalidID.Error(), http.StatusBadRequest)
+		}
+		id := vars["id"]
+
+		p, err := s.db.Get(id)
+		if err != nil {
+			http.Error(w, e.ErrDB.Error(), http.StatusInternalServerError)
 			return
 		}
-
-		// Validate auth token
-		reqToken := r.Header.Get("Authorization")
-		splitToken := strings.Split(reqToken, "Bearer")
-		if len(splitToken) != 2 {
-			http.Error(w, "INVALID_TOKEN_FORMAT", http.StatusBadRequest)
+		if p == nil {
+			http.Error(w, http.StatusText(404), http.StatusNotFound)
 			return
 		}
+		apiResponse(w, http.StatusOK, p)
+	}
+}
 
-		reqToken = strings.TrimSpace(splitToken[1])
-		auth := os.Getenv("BEARER")
-		if reqToken != auth {
-			http.Error(w, "INVALID_TOKEN", http.StatusForbidden)
-			return
-		}
-
-		// Decode body
+// ADMIN ONLY: CreateProduct creates a product based on provided fields (id, name, size, price, quantity)
+func (s *server) CreateProduct() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		var p merchdb.Product
 		if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
-			http.Error(w, "JSON_ERROR", http.StatusBadRequest)
+			http.Error(w, e.ErrInvalidArgJsonBody.Error(), http.StatusBadRequest)
 			return
 		}
+		res, err := s.db.Create(p)
+		if err != nil {
+			http.Error(w, e.ErrDB.Error(), http.StatusInternalServerError)
+			return
+		}
+		apiResponse(w, http.StatusCreated, res)
+	}
+}
 
-		if p.ID == "" {
-			http.Error(w, "INVALID_ARG_ID", http.StatusBadRequest)
-			return
+// ADMIN ONLY: UpdateProduct updates an existing product based on provided fields (name, size, price, quantity)
+func (s *server) UpdateProduct() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// grab id from url /product/{id}
+		vars := mux.Vars(r)
+		if vars == nil {
+			http.Error(w, e.ErrInvalidID.Error(), http.StatusBadRequest)
 		}
+		id := vars["id"]
 
 		// Get product to update
-		updateProduct, err := s.db.GetProductById(p.ID)
+		updateProduct, err := s.db.Get(id)
 		if err != nil {
-			http.Error(w, "DB_ERROR", http.StatusInternalServerError)
+			http.Error(w, e.ErrDB.Error(), http.StatusInternalServerError)
+			return
+		}
+		if updateProduct == nil {
+			http.Error(w, http.StatusText(404), http.StatusNotFound)
 			return
 		}
 
-		if updateProduct == nil {
-			http.Error(w, "NOT_FOUND", http.StatusNotFound)
+		// Decode body, use updateProduct object and unmarshal over to replace any fields that found in req body
+		if err := json.NewDecoder(r.Body).Decode(&updateProduct); err != nil {
+			http.Error(w, e.ErrInvalidArgJsonBody.Error(), http.StatusBadRequest)
+			return
 		}
-
-		updateProduct.Name = p.Name
-		updateProduct.Price = p.Price
-		updateProduct.Size = p.Size
-		updateProduct.Quantity = p.Quantity
+		// prevent client from modifying id
+		updateProduct.ID = id
 
 		// Update product
-		if err := s.db.Update(updateProduct); err != nil {
-			http.Error(w, "DB_ERROR", http.StatusInternalServerError)
+		p, err := s.db.Update(updateProduct)
+		if err != nil {
+			http.Error(w, e.ErrDB.Error(), http.StatusInternalServerError)
 			return
 		}
-		apiResponse(w, http.StatusOK, updateProduct)
+		apiResponse(w, http.StatusOK, p)
+	}
+}
+
+// ADMIN ONLY: DeleteProduct deletes an existing product using id
+func (s *server) DeleteProduct() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		if vars == nil {
+			http.Error(w, e.ErrInvalidID.Error(), http.StatusBadRequest)
+			return
+		}
+		id := vars["id"]
+
+		if err := s.db.Delete(id); err != nil {
+			http.Error(w, e.ErrDB.Error(), http.StatusInternalServerError)
+			return
+		}
+		apiResponse(w, http.StatusGone, http.StatusText(410))
 	}
 }
 

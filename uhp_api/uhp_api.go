@@ -5,7 +5,8 @@ import (
 	"os"
 
 	"github.com/akleventis/united_house_server/merchdb"
-	rl "github.com/akleventis/united_house_server/ratelimit"
+	m "github.com/akleventis/united_house_server/middleware"
+	"github.com/gorilla/mux"
 
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -15,14 +16,13 @@ import (
 )
 
 type server struct {
-	// db     merchdb.Datastore
+	// db     merchdb.Datastore (test client)
 	db     merchdb.ProductDB
-	router *http.ServeMux
+	router *mux.Router
 }
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
+	if err := godotenv.Load("../.env"); err != nil {
 		log.Fatal("Error loading .env file")
 	}
 
@@ -36,16 +36,21 @@ func main() {
 
 	s := &server{
 		db:     *db,
-		router: http.NewServeMux(),
+		router: mux.NewRouter(),
 	}
 
 	// stripe
-	s.router.HandleFunc("/checkout", rl.Limit(s.HandleCheckout())) // POST
-	s.router.HandleFunc("/webhook", rl.Limit(s.HandleWebhook()))   // POST => from stripe
+	s.router.HandleFunc("/checkout", m.Limit(s.HandleCheckout())).Methods("POST")
+	s.router.HandleFunc("/webhook", m.Limit(s.HandleWebhook())).Methods("POST")
 
 	// products
-	s.router.HandleFunc("/get_products", rl.Limit(s.GetProducts()))     // GET
-	s.router.HandleFunc("/update_product", rl.Limit(s.UpdateProduct())) // PUT (include all fields)
+	s.router.HandleFunc("/products", m.Limit(s.GetProducts())).Methods("GET")
+
+	// product
+	s.router.HandleFunc("/product", m.Limit(m.Auth(s.CreateProduct()))).Methods("POST")
+	s.router.HandleFunc("/product/{id}", m.Limit(m.Auth(s.GetProduct()))).Methods("GET")
+	s.router.HandleFunc("/product/{id}", m.Limit(m.Auth(s.DeleteProduct()))).Methods("DELETE")
+	s.router.HandleFunc("/product/{id}", m.Limit(m.Auth(s.UpdateProduct()))).Methods("PATCH")
 
 	handler := cors.Default().Handler(s.router)
 	http.ListenAndServe(":5001", handler)

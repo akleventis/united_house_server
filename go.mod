@@ -7,7 +7,8 @@ require github.com/lib/pq v1.10.4
 require golang.org/x/sys v0.0.0-20220519141025-dcacdad47464 // indirect
 
 require (
-	github.com/akleventis/united_house_server v0.0.0-20220324025155-7a5ffcda5065
+	github.com/akleventis/united_house_server v0.0.0-20220617061045-083594f93391
+	github.com/gorilla/mux v1.8.0
 	github.com/joho/godotenv v1.4.0
 	github.com/rs/cors v1.8.2
 	github.com/sirupsen/logrus v1.8.1
