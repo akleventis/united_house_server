@@ -10,13 +10,13 @@ import (
 	"time"
 )
 
-type Datastore interface {
-	GetProducts() ([]*Product, error)
-	GetProductOrder(id string, quantity int) (*Product, error)
-	UpdateQuantity(id string, quantity int) error
-	GetProductById(id string) (*Product, error)
-	Update(p *Product) error
-}
+// type Datastore interface {
+// 	GetProducts() ([]*Product, error)
+// 	GetProductOrder(id string, quantity int) (*Product, error)
+// 	UpdateQuantity(id string, quantity int) error
+// 	GetProductById(id string) (*Product, error)
+// 	Update(p *Product) error
+// }
 
 // create struct
 type ProductDB struct {
@@ -29,7 +29,7 @@ func (db *ProductDB) createMerchTable() error {
 		id VARCHAR( 50 ) PRIMARY KEY NOT NULL,
 		name VARCHAR( 50 ) NOT NULL,
 		size VARCHAR( 50 ) NOT NULL,
-		price INT NOT NULL,
+		price NUMERIC NOT NULL,
 		quantity INT NOT NULL)`)
 	if err != nil {
 		return err
