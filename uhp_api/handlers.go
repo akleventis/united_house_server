@@ -20,6 +20,11 @@ type lineItems struct {
 	Items []*merchdb.Product `json:"items"`
 }
 
+type checkoutResponse struct {
+	URL     string           `json:"url"`
+	Product *merchdb.Product `json:"product"`
+}
+
 func apiResponse(w http.ResponseWriter, code int, obj interface{}) {
 	r, err := json.Marshal(obj)
 	if err != nil {
@@ -52,8 +57,8 @@ func createLineItems(products []*merchdb.Product) []*stripe.CheckoutSessionLineI
 	var cli []*stripe.CheckoutSessionLineItemParams
 	for _, v := range products {
 		item := &stripe.CheckoutSessionLineItemParams{
-			Name:        stripe.String(string(v.Name)),
-			Description: stripe.String(string(v.ID)), // product_id for webhook update database inventory
+			Name:        stripe.String(v.Name + " " + v.Size),
+			Description: stripe.String(string(v.ID)),
 			Amount:      stripe.Int64(int64(v.Price * 100)),
 			Currency:    stripe.String("usd"),
 			Quantity:    stripe.Int64(int64(v.Quantity)),
@@ -92,12 +97,13 @@ func (s *server) HandleCheckout() http.HandlerFunc {
 
 		// grab/verify items are in stock
 		products, err := s.fulfillOrder(items)
-		// TODO: handle error message front end
-		// 				message := fmt.Sprintf("Only %d %s %s(s), in stock. Please update cart", p.Quantity, p.Size, p.Name)
-		// 				message = fmt.Sprintf("%s %s is out of stock. Please update cart", p.Size, p.Name)
 		if err != nil {
 			if err == e.ErrOutOfStock && len(products) > 0 {
-				apiResponse(w, http.StatusAccepted, products[0]) // one product should exist, have front end deal with string logic
+				res := &checkoutResponse{
+					Product: products[0],
+				}
+				// return out of stock product to client
+				apiResponse(w, http.StatusAccepted, res)
 				return
 			}
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -113,13 +119,11 @@ func (s *server) HandleCheckout() http.HandlerFunc {
 			return
 		}
 
-		sessionURL, err := json.Marshal(sesh.URL)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+		res := &checkoutResponse{
+			URL: sesh.URL,
 		}
 
-		apiResponse(w, http.StatusOK, sessionURL)
+		apiResponse(w, http.StatusOK, res)
 	}
 }
 
@@ -275,8 +279,8 @@ func (s *server) HandleWebhook() http.HandlerFunc {
 			i := session.ListLineItems(sesh.ID, params)
 			for i.Next() {
 				li := i.LineItem()
-
 				id := li.Description // stripe product ID
+
 				quantity := int(li.Quantity)
 
 				if err := s.db.UpdateQuantity(id, quantity); err != nil {

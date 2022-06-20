@@ -117,7 +117,7 @@ func (pDB *ProductDB) GetOrder(id string, quantity int) (*Product, error) {
 
 // UpdateQuantity reduces quantity in database using product_id
 func (pDB *ProductDB) UpdateQuantity(id string, quantity int) error {
-	query := `UPDATE merch_t SET quantity=quantity-$1 WHERE id='$2;`
+	query := `UPDATE merch_t SET quantity=quantity-$1 WHERE id=$2;`
 	if _, err := pDB.Exec(query, quantity, id); err != nil {
 		return e.ErrDB
 	}

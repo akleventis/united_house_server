@@ -24,7 +24,6 @@ type ProductDB struct {
 }
 
 func (db *ProductDB) createMerchTable() error {
-	// create table
 	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS merch_t (
 		id VARCHAR( 50 ) PRIMARY KEY NOT NULL,
 		name VARCHAR( 50 ) NOT NULL,
