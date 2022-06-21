@@ -5,14 +5,23 @@ import (
 	"fmt"
 
 	e "github.com/akleventis/united_house_server/errors"
-	log "github.com/sirupsen/logrus"
 )
+
+type Datastore interface {
+	Get(id string) (*Product, error)
+	Update(p *Product) (*Product, error)
+	Delete(id string) error
+	Create(p Product) (*Product, error)
+	GetProducts() ([]Product, error)
+	GetOrder(id string, quantity int) (*Product, error)
+	UpdateQuantity(id string, quantity int) error
+}
 
 type Product struct {
 	ID       string  `json:"id"`
 	Name     string  `json:"name"`
 	Size     string  `json:"size"`
-	Price    float64 `json:"price"`
+	Price    float64 `json:"price,omitempty"`
 	Quantity int     `json:"quantity"`
 }
 
@@ -30,15 +39,15 @@ type Product struct {
 
 // Get returns a product using product_id
 func (pDB *ProductDB) Get(id string) (*Product, error) {
-	var p *Product
+	var p Product
 	query := `SELECT * from merch_t where id=$1 LIMIT 1;`
-	if err := pDB.QueryRow(query).Scan(&p.ID, &p.Name, &p.Size, &p.Price, &p.Quantity); err != nil {
+	if err := pDB.QueryRow(query, id).Scan(&p.ID, &p.Name, &p.Size, &p.Price, &p.Quantity); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
 		return nil, e.ErrDB
 	}
-	return p, nil
+	return &p, nil
 }
 
 // Update will update a product using product_id
@@ -63,7 +72,6 @@ func (pDB *ProductDB) Delete(id string) error {
 // Create will post a new product to merch_t
 func (pDB *ProductDB) Create(p Product) (*Product, error) {
 	query := `INSERT INTO merch_t (id, name, size, price, quantity) VALUES ($1, $2, $3, $4, $5, $6);`
-	log.Info(query)
 	if _, err := pDB.Exec(query, p.ID, p.Name, p.Size, p.Price, p.Quantity); err != nil {
 		return nil, e.ErrDB
 	}

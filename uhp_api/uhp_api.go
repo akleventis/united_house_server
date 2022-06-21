@@ -16,8 +16,7 @@ import (
 )
 
 type server struct {
-	// db     merchdb.Datastore (test client)
-	db     merchdb.ProductDB
+	db     merchdb.Datastore
 	router *mux.Router
 }
 
@@ -35,7 +34,7 @@ func main() {
 	defer db.DB.Close()
 
 	s := &server{
-		db:     *db,
+		db:     db,
 		router: mux.NewRouter(),
 	}
 

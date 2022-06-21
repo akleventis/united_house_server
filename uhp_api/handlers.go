@@ -179,10 +179,11 @@ func (s *server) CreateProduct() http.HandlerFunc {
 	}
 }
 
+// to do fuck this make it a put
 // ADMIN ONLY: UpdateProduct updates an existing product based on provided fields (name, size, price, quantity)
 func (s *server) UpdateProduct() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// grab id from url /product/{id}
+		// grab id from url
 		vars := mux.Vars(r)
 		if vars == nil {
 			http.Error(w, e.ErrInvalidID.Error(), http.StatusBadRequest)
@@ -258,7 +259,7 @@ func (s *server) HandleWebhook() http.HandlerFunc {
 		event, err := webhook.ConstructEvent(payload, req.Header.Get("Stripe-Signature"),
 			endpointSecret)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error verifying webhook signature: %v\n", err)
+			log.Errorf("Error verifying webhook signature: %v\n", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -269,7 +270,7 @@ func (s *server) HandleWebhook() http.HandlerFunc {
 			var sesh stripe.CheckoutSession
 			err = json.Unmarshal(event.Data.Raw, &sesh)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error parsing webhook JSON: %v\n", err)
+				log.Errorf("Error parsing webhook JSON: %v\n", err)
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
@@ -284,8 +285,7 @@ func (s *server) HandleWebhook() http.HandlerFunc {
 				quantity := int(li.Quantity)
 
 				if err := s.db.UpdateQuantity(id, quantity); err != nil {
-					fmt.Fprintf(os.Stderr, "UPDATE INVENTORY ERROR: %v\n", err)
-					http.Error(w, err.Error(), http.StatusInternalServerError)
+					http.Error(w, e.ErrDB.Error(), http.StatusInternalServerError)
 					return
 				}
 			}
