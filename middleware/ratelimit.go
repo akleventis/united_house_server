@@ -30,7 +30,7 @@ func getIP(ipAddress string) *rate.Limiter {
 	value, ok := ips[ipAddress]
 	if !ok {
 		rt := rate.Every(time.Minute)
-		limiter := rate.NewLimiter(rt, 20)
+		limiter := rate.NewLimiter(rt, 100)
 
 		ips[ipAddress] = &ip{limiter, time.Now()}
 		return limiter

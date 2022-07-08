@@ -1,4 +1,4 @@
-// package testclient
+package testclient
 
 // import "github.com/akleventis/united_house_server/merchdb"
 

@@ -13,6 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	stripe "github.com/stripe/stripe-go/v72"
 	"github.com/stripe/stripe-go/v72/checkout/session"
+
 	webhook "github.com/stripe/stripe-go/webhook"
 )
 
@@ -62,6 +63,7 @@ func createLineItems(products []*merchdb.Product) []*stripe.CheckoutSessionLineI
 			Amount:      stripe.Int64(int64(v.Price * 100)),
 			Currency:    stripe.String("usd"),
 			Quantity:    stripe.Int64(int64(v.Quantity)),
+			Images:      stripe.StringSlice([]string{v.ImageURL}),
 		}
 		cli = append(cli, item)
 	}
@@ -77,6 +79,7 @@ func createCheckoutSession(cli []*stripe.CheckoutSessionLineItemParams) (*stripe
 		CancelURL:          stripe.String(os.Getenv("CLIENT_URL")),
 		LineItems:          cli,
 	}
+	stripe.Key = os.Getenv("STRIPE_KEY")
 	sesh, err := session.New(params)
 	if err != nil {
 		return nil, err
@@ -111,7 +114,6 @@ func (s *server) HandleCheckout() http.HandlerFunc {
 		}
 
 		checkoutLineItems := createLineItems(products)
-
 		// create checkout session
 		sesh, err := createCheckoutSession(checkoutLineItems)
 		if err != nil {
@@ -140,9 +142,14 @@ func (s *server) GetProducts() http.HandlerFunc {
 	}
 }
 
+// ---- ADMIN ONLY ----- //
+
+// MERCH
+
 // ADMIN ONLY: GetProduct retrieves a product using and id
 func (s *server) GetProduct() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
 		vars := mux.Vars(r)
 		if vars == nil {
 			http.Error(w, e.ErrInvalidID.Error(), http.StatusBadRequest)
@@ -179,7 +186,6 @@ func (s *server) CreateProduct() http.HandlerFunc {
 	}
 }
 
-// to do fuck this make it a put
 // ADMIN ONLY: UpdateProduct updates an existing product based on provided fields (name, size, price, quantity)
 func (s *server) UpdateProduct() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -280,6 +286,7 @@ func (s *server) HandleWebhook() http.HandlerFunc {
 			i := session.ListLineItems(sesh.ID, params)
 			for i.Next() {
 				li := i.LineItem()
+
 				id := li.Description // stripe product ID
 
 				quantity := int(li.Quantity)

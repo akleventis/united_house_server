@@ -12,11 +12,12 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
-	stripe "github.com/stripe/stripe-go/v72"
+	stripe "github.com/stripe/stripe-go"
 )
 
 type server struct {
-	db     merchdb.Datastore
+	// db     merchdb.Datastore
+	db     *merchdb.ProductDB
 	router *mux.Router
 }
 

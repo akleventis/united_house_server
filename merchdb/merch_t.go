@@ -5,24 +5,26 @@ import (
 	"fmt"
 
 	e "github.com/akleventis/united_house_server/errors"
+	"github.com/stripe/stripe-go/product"
 )
 
-type Datastore interface {
-	Get(id string) (*Product, error)
-	Update(p *Product) (*Product, error)
-	Delete(id string) error
-	Create(p Product) (*Product, error)
-	GetProducts() ([]Product, error)
-	GetOrder(id string, quantity int) (*Product, error)
-	UpdateQuantity(id string, quantity int) error
-}
+// type Datastore interface {
+// 	Get(id string) (*Product, error)
+// 	Update(p *Product) (*Product, error)
+// 	Delete(id string) error
+// 	Create(p Product) (*Product, error)
+// 	GetProducts() ([]Product, error)
+// 	GetOrder(id string, quantity int) (*Product, error)
+// 	UpdateQuantity(id string, quantity int) error
+// }
 
 type Product struct {
 	ID       string  `json:"id"`
 	Name     string  `json:"name"`
 	Size     string  `json:"size"`
-	Price    float64 `json:"price,omitempty"`
+	Price    float64 `json:"price"`
 	Quantity int     `json:"quantity"`
+	ImageURL string  `json:"image_url,omitempty"`
 }
 
 // TODO: UPDATE ON OTHER DEVICES
@@ -47,6 +49,12 @@ func (pDB *ProductDB) Get(id string) (*Product, error) {
 		}
 		return nil, e.ErrDB
 	}
+
+	pInfo, _ := product.Get(p.ID, nil)
+	if len(pInfo.Images) > 0 {
+		p.ImageURL = pInfo.Images[0]
+	}
+
 	return &p, nil
 }
 
@@ -82,7 +90,7 @@ func (pDB *ProductDB) Create(p Product) (*Product, error) {
 func (pDB *ProductDB) GetProducts() ([]Product, error) {
 	products := make([]Product, 0)
 
-	query := `SELECT * from merch_t;`
+	query := `SELECT * FROM merch_t;`
 	rows, err := pDB.Query(query)
 	if err != nil {
 		return nil, e.ErrDB
@@ -94,19 +102,25 @@ func (pDB *ProductDB) GetProducts() ([]Product, error) {
 		if err != nil {
 			return nil, e.ErrDB
 		}
+
+		// get image url
+		pInfo, _ := product.Get(p.ID, nil)
+		if len(pInfo.Images) > 0 {
+			p.ImageURL = pInfo.Images[0]
+		}
 		products = append(products, p)
 	}
 	err = rows.Err()
 	if err != nil {
 		return nil, err
 	}
+
 	return products, nil
 }
 
 // GetOrder retrieves a product by ID and verifies order can be fulfilled. Returns error if quantity cannot be fulfilled
 func (pDB *ProductDB) GetOrder(id string, quantity int) (*Product, error) {
 	var p Product
-
 	query := `SELECT * FROM merch_t WHERE id=$1 LIMIT 1;`
 	if err := pDB.QueryRow(query, id).Scan(&p.ID, &p.Name, &p.Size, &p.Price, &p.Quantity); err != nil {
 		if err == sql.ErrNoRows {
@@ -119,6 +133,11 @@ func (pDB *ProductDB) GetOrder(id string, quantity int) (*Product, error) {
 		return &p, e.ErrOutOfStock
 	}
 	p.Quantity = quantity
+
+	pInfo, _ := product.Get(p.ID, nil)
+	if len(pInfo.Images) > 0 {
+		p.ImageURL = pInfo.Images[0]
+	}
 
 	return &p, nil
 }
