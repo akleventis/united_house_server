@@ -8,7 +8,7 @@ import (
 	"os"
 
 	e "github.com/akleventis/united_house_server/errors"
-	"github.com/akleventis/united_house_server/merchdb"
+	"github.com/akleventis/united_house_server/uhp_db"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	stripe "github.com/stripe/stripe-go/v72"
@@ -18,12 +18,12 @@ import (
 )
 
 type lineItems struct {
-	Items []*merchdb.Product `json:"items"`
+	Items []*uhp_db.Product `json:"items"`
 }
 
 type checkoutResponse struct {
-	URL     string           `json:"url"`
-	Product *merchdb.Product `json:"product"`
+	URL     string          `json:"url"`
+	Product *uhp_db.Product `json:"product"`
 }
 
 func apiResponse(w http.ResponseWriter, code int, obj interface{}) {
@@ -38,13 +38,13 @@ func apiResponse(w http.ResponseWriter, code int, obj interface{}) {
 }
 
 // fulfillOrder verifies items are in stock and returns the resulting products array
-func (s *server) fulfillOrder(items lineItems) ([]*merchdb.Product, error) {
-	var products []*merchdb.Product
+func (s *server) fulfillOrder(items lineItems) ([]*uhp_db.Product, error) {
+	var products []*uhp_db.Product
 	for _, v := range items.Items {
 		p, err := s.db.GetOrder(v.ID, v.Quantity)
 		if err != nil {
 			if err == e.ErrOutOfStock && p != nil {
-				return []*merchdb.Product{p}, e.ErrOutOfStock
+				return []*uhp_db.Product{p}, e.ErrOutOfStock
 			}
 			return nil, err
 		}
@@ -54,7 +54,7 @@ func (s *server) fulfillOrder(items lineItems) ([]*merchdb.Product, error) {
 }
 
 // createLineItems converts products array to stripe LineItems
-func createLineItems(products []*merchdb.Product) []*stripe.CheckoutSessionLineItemParams {
+func createLineItems(products []*uhp_db.Product) []*stripe.CheckoutSessionLineItemParams {
 	var cli []*stripe.CheckoutSessionLineItemParams
 	for _, v := range products {
 		item := &stripe.CheckoutSessionLineItemParams{
@@ -172,7 +172,7 @@ func (s *server) GetProduct() http.HandlerFunc {
 // ADMIN ONLY: CreateProduct creates a product based on provided fields (id, name, size, price, quantity)
 func (s *server) CreateProduct() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var p merchdb.Product
+		var p uhp_db.Product
 		if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
 			http.Error(w, e.ErrInvalidArgJsonBody.Error(), http.StatusBadRequest)
 			return
