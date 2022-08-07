@@ -129,122 +129,6 @@ func (s *server) HandleCheckout() http.HandlerFunc {
 	}
 }
 
-// getProducts returns json array of all products
-func (s *server) GetProducts() http.HandlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
-		products, err := s.db.GetProducts()
-		if err != nil {
-			http.Error(w, e.ErrDB.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		apiResponse(w, http.StatusOK, products)
-	}
-}
-
-// ---- ADMIN ONLY ----- //
-
-// MERCH
-
-// ADMIN ONLY: GetProduct retrieves a product using and id
-func (s *server) GetProduct() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-
-		vars := mux.Vars(r)
-		if vars == nil {
-			http.Error(w, e.ErrInvalidID.Error(), http.StatusBadRequest)
-		}
-		id := vars["id"]
-
-		p, err := s.db.Get(id)
-		if err != nil {
-			http.Error(w, e.ErrDB.Error(), http.StatusInternalServerError)
-			return
-		}
-		if p == nil {
-			http.Error(w, http.StatusText(404), http.StatusNotFound)
-			return
-		}
-		apiResponse(w, http.StatusOK, p)
-	}
-}
-
-// ADMIN ONLY: CreateProduct creates a product based on provided fields (id, name, size, price, quantity)
-func (s *server) CreateProduct() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var p uhp_db.Product
-		if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
-			http.Error(w, e.ErrInvalidArgJsonBody.Error(), http.StatusBadRequest)
-			return
-		}
-		res, err := s.db.Create(p)
-		if err != nil {
-			http.Error(w, e.ErrDB.Error(), http.StatusInternalServerError)
-			return
-		}
-		apiResponse(w, http.StatusCreated, res)
-	}
-}
-
-// ADMIN ONLY: UpdateProduct updates an existing product based on provided fields (name, size, price, quantity)
-func (s *server) UpdateProduct() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		// grab id from url
-		vars := mux.Vars(r)
-		if vars == nil {
-			http.Error(w, e.ErrInvalidID.Error(), http.StatusBadRequest)
-		}
-		id := vars["id"]
-
-		// Get product to update
-		updateProduct, err := s.db.Get(id)
-		if err != nil {
-			http.Error(w, e.ErrDB.Error(), http.StatusInternalServerError)
-			return
-		}
-		if updateProduct == nil {
-			http.Error(w, http.StatusText(404), http.StatusNotFound)
-			return
-		}
-
-		// Decode body, use updateProduct object and unmarshal over to replace any fields that found in req body
-		if err := json.NewDecoder(r.Body).Decode(&updateProduct); err != nil {
-			http.Error(w, e.ErrInvalidArgJsonBody.Error(), http.StatusBadRequest)
-			return
-		}
-		// prevent client from modifying id
-		updateProduct.ID = id
-
-		// Update product
-		p, err := s.db.Update(updateProduct)
-		if err != nil {
-			http.Error(w, e.ErrDB.Error(), http.StatusInternalServerError)
-			return
-		}
-		apiResponse(w, http.StatusOK, p)
-	}
-}
-
-// ADMIN ONLY: DeleteProduct deletes an existing product using id
-func (s *server) DeleteProduct() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		if vars == nil {
-			http.Error(w, e.ErrInvalidID.Error(), http.StatusBadRequest)
-			return
-		}
-		id := vars["id"]
-
-		if err := s.db.Delete(id); err != nil {
-			http.Error(w, e.ErrDB.Error(), http.StatusInternalServerError)
-			return
-		}
-		apiResponse(w, http.StatusGone, http.StatusText(410))
-	}
-}
-
-// ==================================================================== //
-
 // WEBHOOK
 // handleWebhook() listens for Checkout Session Confirmation then Update Inventory accordingly
 func (s *server) HandleWebhook() http.HandlerFunc {
@@ -299,5 +183,165 @@ func (s *server) HandleWebhook() http.HandlerFunc {
 		}
 		log.Info("")
 		w.WriteHeader(http.StatusOK)
+	}
+}
+
+// MERCH
+
+// getProducts returns json array of all products
+func (s *server) GetProducts() http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		products, err := s.db.GetProducts()
+		if err != nil {
+			http.Error(w, e.ErrDB.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		apiResponse(w, http.StatusOK, products)
+	}
+}
+
+// ADMIN ONLY: GetProduct retrieves a product using and id
+func (s *server) GetProduct() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		vars := mux.Vars(r)
+		if vars == nil {
+			http.Error(w, e.ErrInvalidID.Error(), http.StatusBadRequest)
+		}
+		id := vars["id"]
+
+		p, err := s.db.GetProduct(id)
+		if err != nil {
+			http.Error(w, e.ErrDB.Error(), http.StatusInternalServerError)
+			return
+		}
+		if p == nil {
+			http.Error(w, http.StatusText(404), http.StatusNotFound)
+			return
+		}
+		apiResponse(w, http.StatusOK, p)
+	}
+}
+
+// ADMIN ONLY: CreateProduct creates a product based on provided fields (id, name, size, price, quantity)
+func (s *server) CreateProduct() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var p uhp_db.Product
+		if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+			http.Error(w, e.ErrInvalidArgJsonBody.Error(), http.StatusBadRequest)
+			return
+		}
+		res, err := s.db.CreateProduct(p)
+		if err != nil {
+			http.Error(w, e.ErrDB.Error(), http.StatusInternalServerError)
+			return
+		}
+		apiResponse(w, http.StatusCreated, res)
+	}
+}
+
+// ADMIN ONLY: UpdateProduct updates an existing product based on provided fields (name, size, price, quantity)
+func (s *server) UpdateProduct() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// grab id from url
+		vars := mux.Vars(r)
+		if vars == nil {
+			http.Error(w, e.ErrInvalidID.Error(), http.StatusBadRequest)
+		}
+		id := vars["id"]
+
+		// Get product to update
+		updateProduct, err := s.db.GetProduct(id)
+		if err != nil {
+			http.Error(w, e.ErrDB.Error(), http.StatusInternalServerError)
+			return
+		}
+		if updateProduct == nil {
+			http.Error(w, http.StatusText(404), http.StatusNotFound)
+			return
+		}
+
+		// Decode body, use updateProduct object and unmarshal over to replace any fields that found in req body
+		if err := json.NewDecoder(r.Body).Decode(&updateProduct); err != nil {
+			http.Error(w, e.ErrInvalidArgJsonBody.Error(), http.StatusBadRequest)
+			return
+		}
+		// prevent client from modifying id
+		updateProduct.ID = id
+
+		// Update product
+		p, err := s.db.UpdateProduct(updateProduct)
+		if err != nil {
+			http.Error(w, e.ErrDB.Error(), http.StatusInternalServerError)
+			return
+		}
+		apiResponse(w, http.StatusOK, p)
+	}
+}
+
+// ADMIN ONLY: DeleteProduct deletes an existing product using id
+func (s *server) DeleteProduct() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		if vars == nil {
+			http.Error(w, e.ErrInvalidID.Error(), http.StatusBadRequest)
+			return
+		}
+		id := vars["id"]
+
+		if err := s.db.DeleteProduct(id); err != nil {
+			http.Error(w, e.ErrDB.Error(), http.StatusInternalServerError)
+			return
+		}
+		apiResponse(w, http.StatusGone, "Gone")
+	}
+}
+
+// EVENTS
+func (s *server) GetEvents() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		events, err := s.db.GetEvents()
+		if err != nil {
+			http.Error(w, e.ErrDB.Error(), http.StatusInternalServerError)
+			return
+		}
+		apiResponse(w, http.StatusOK, events)
+	}
+}
+
+func (s *server) GetEvent() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		if vars == nil {
+			http.Error(w, e.ErrInvalidID.Error(), http.StatusBadRequest)
+			return
+		}
+		id := vars["id"]
+		log.Info("ID: ", id)
+
+		event, err := s.db.GetEvent(id)
+		if err != nil {
+			http.Error(w, e.ErrDB.Error(), http.StatusInternalServerError)
+			return
+		}
+		apiResponse(w, http.StatusOK, event)
+	}
+}
+
+func (s *server) CreateEvent() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var event uhp_db.Event
+		if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
+			log.Info(err)
+			http.Error(w, e.ErrInvalidArgJsonBody.Error(), http.StatusBadRequest)
+			return
+		}
+		res, err := s.db.CreateEvent(event)
+		if err != nil {
+			http.Error(w, e.ErrDB.Error(), http.StatusInternalServerError)
+			return
+		}
+		apiResponse(w, http.StatusCreated, res)
 	}
 }

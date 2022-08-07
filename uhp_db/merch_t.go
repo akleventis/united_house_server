@@ -30,7 +30,7 @@ type Product struct {
 //   "merch_pkey" PRIMARY KEY, btree (id)
 
 // Get returns a product using product_id
-func (uDB *UhpDB) Get(id string) (*Product, error) {
+func (uDB *UhpDB) GetProduct(id string) (*Product, error) {
 	var p Product
 	query := `SELECT * from merch_t where id=$1 LIMIT 1;`
 	if err := uDB.QueryRow(query, id).Scan(&p.ID, &p.Name, &p.Size, &p.Price, &p.Quantity); err != nil {
@@ -40,6 +40,7 @@ func (uDB *UhpDB) Get(id string) (*Product, error) {
 		return nil, e.ErrDB
 	}
 
+	// get product image from Stripe
 	pInfo, _ := product.Get(p.ID, nil)
 	if len(pInfo.Images) > 0 {
 		p.ImageURL = pInfo.Images[0]
@@ -49,7 +50,7 @@ func (uDB *UhpDB) Get(id string) (*Product, error) {
 }
 
 // Update will update a product using product_id
-func (uDB *UhpDB) Update(p *Product) (*Product, error) {
+func (uDB *UhpDB) UpdateProduct(p *Product) (*Product, error) {
 	// string format price 2 decimal precision
 	query := fmt.Sprintf(`UPDATE merch_t SET name=$1, size=$2, price=%.2f, quantity=$3 WHERE id=$4;`, p.Price)
 	if _, err := uDB.Exec(query, p.Name, p.Size, p.Quantity, p.ID); err != nil {
@@ -59,7 +60,7 @@ func (uDB *UhpDB) Update(p *Product) (*Product, error) {
 }
 
 // Delete will remove a product using product_id
-func (uDB *UhpDB) Delete(id string) error {
+func (uDB *UhpDB) DeleteProduct(id string) error {
 	query := `DELETE FROM merch_t WHERE id=$1;`
 	if _, err := uDB.Exec(query, id); err != nil {
 		return e.ErrDB
@@ -68,7 +69,7 @@ func (uDB *UhpDB) Delete(id string) error {
 }
 
 // Create will post a new product to merch_t
-func (uDB *UhpDB) Create(p Product) (*Product, error) {
+func (uDB *UhpDB) CreateProduct(p Product) (*Product, error) {
 	query := `INSERT INTO merch_t (id, name, size, price, quantity) VALUES ($1, $2, $3, $4, $5, $6);`
 	if _, err := uDB.Exec(query, p.ID, p.Name, p.Size, p.Price, p.Quantity); err != nil {
 		return nil, e.ErrDB

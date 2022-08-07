@@ -47,37 +47,20 @@ func (db *UhpDB) createMerchTable() error {
 func (db *UhpDB) createEventsTable() error {
 	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS events_t (
 		id SERIAL PRIMARY KEY,
-		headliner JSON NOT NULL,
-		openers JSON,
+		headliner json NOT NULL,
+		openers json,
 		image_url VARCHAR(50) NOT NULL,
 		location_name VARCHAR(50) NOT NULL,
 		location_url VARCHAR(50) NOT NULL,
-		start_time VARCHAR(50),
-		end_time	VARCHAR(50),
-		ticket_url VARCHAR(50) NOT NULL
+		ticket_url VARCHAR(50), 
+		start_time TIMESTAMP without time zone,
+		end_time TIMESTAMP without time zone
 	)`)
 	if err != nil {
 		return err
 	}
 	return nil
 }
-
-// headliner json
-// {
-// 	"name": "Beebo",
-// 	"url": "https://instagram.com/BEEBO_MUSIC/"
-// }
-
-// openers json (id's preserve order)
-// {
-// 	1: {
-// 		"name": "Beebo",
-// 		"url": "https://instagram.com/BEEBO_MUSIC/"
-// 	},
-// 	2: {
-// 		etc..
-// 	}
-// }
 
 // uhpdb=# \d featured_songs_t;
 //  id                    | integer               |           | not null | nextval('featured_artists_t_id_seq'::regclass)
