@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strconv"
 
 	e "github.com/akleventis/united_house_server/errors"
 	"github.com/akleventis/united_house_server/uhp_db"
@@ -333,7 +334,6 @@ func (s *server) CreateEvent() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var event uhp_db.Event
 		if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
-			log.Info(err)
 			http.Error(w, e.ErrInvalidArgJsonBody.Error(), http.StatusBadRequest)
 			return
 		}
@@ -343,5 +343,65 @@ func (s *server) CreateEvent() http.HandlerFunc {
 			return
 		}
 		apiResponse(w, http.StatusCreated, res)
+	}
+}
+
+// Only give fields wanting to update
+func (s *server) UpdateEvent() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		if vars == nil {
+			http.Error(w, e.ErrInvalidID.Error(), http.StatusBadRequest)
+		}
+		id := vars["id"]
+
+		// Get product to update
+		updateEvent, err := s.db.GetEvent(id)
+		if err != nil {
+			http.Error(w, e.ErrDB.Error(), http.StatusInternalServerError)
+			return
+		}
+		if updateEvent == nil {
+			http.Error(w, http.StatusText(404), http.StatusNotFound)
+			return
+		}
+
+		// Decode body, use updateEvent object and unmarshal over to replace any fields that found in req body
+		if err := json.NewDecoder(r.Body).Decode(&updateEvent); err != nil {
+			http.Error(w, e.ErrInvalidArgJsonBody.Error(), http.StatusBadRequest)
+			return
+		}
+		// prevent client from modifying id
+		intID, err := strconv.Atoi(id)
+		if err != nil {
+			http.Error(w, e.ErrInvalidID.Error(), http.StatusBadRequest)
+		}
+		updateEvent.ID = intID
+
+		// Update product
+		p, err := s.db.UpdateEvent(updateEvent)
+		if err != nil {
+			http.Error(w, e.ErrDB.Error(), http.StatusInternalServerError)
+			return
+		}
+		apiResponse(w, http.StatusOK, p)
+	}
+}
+
+// ADMIN ONLY: DeleteEvent deletes an existing product using id
+func (s *server) DeleteEvent() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		if vars == nil {
+			http.Error(w, e.ErrInvalidID.Error(), http.StatusBadRequest)
+			return
+		}
+		id := vars["id"]
+
+		if err := s.db.DeleteEvent(id); err != nil {
+			http.Error(w, e.ErrDB.Error(), http.StatusInternalServerError)
+			return
+		}
+		apiResponse(w, http.StatusGone, "Gone")
 	}
 }

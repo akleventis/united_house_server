@@ -57,8 +57,8 @@ func main() {
 	s.router.HandleFunc("/event/{id}", m.Limit(s.GetEvent())).Methods("GET")
 	// admin only
 	s.router.HandleFunc("/event", m.Limit(m.Auth(s.CreateEvent()))).Methods("POST")
-	// s.router.HandleFunc("/event/{id}", m.Limit(m.Auth(s.UpdateEvent()))).Methods("PATCH")
-	// s.router.HandleFunc("/event/{id}", m.Limit(m.Auth(s.DeleteEvent()))).Methdos("DELETE")
+	s.router.HandleFunc("/event/{id}", m.Limit(m.Auth(s.UpdateEvent()))).Methods("PATCH")
+	s.router.HandleFunc("/event/{id}", m.Limit(m.Auth(s.DeleteEvent()))).Methods("DELETE")
 
 	// featured artists (soundcloud)
 	// s.router.HandleFunc("/artists", m.Limit(s.GetArtists())).Methods("GET")

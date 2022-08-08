@@ -5,6 +5,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"time"
 
 	e "github.com/akleventis/united_house_server/errors"
 	log "github.com/sirupsen/logrus"
@@ -24,15 +25,15 @@ type DJ struct {
 }
 
 type Event struct {
-	ID           int          `json:"id"`
-	Headliner    Headliner    `json:"headliner"`
-	Openers      Openers      `json:"openers"`
-	ImageURL     string       `json:"image_url"`
-	LocationName string       `json:"location_name"`
-	LocationURL  string       `json:"location_url"`
-	TicketURL    string       `json:"ticket_url"`
-	StartTime    sql.NullTime `json:"start_time"`
-	EndTime      sql.NullTime `json:"end_time"`
+	ID           int       `json:"id"`
+	Headliner    Headliner `json:"headliner"`
+	Openers      Openers   `json:"openers"`
+	ImageURL     string    `json:"image_url"`
+	LocationName string    `json:"location_name"`
+	LocationURL  string    `json:"location_url"`
+	TicketURL    string    `json:"ticket_url"`
+	StartTime    time.Time `json:"start_time"`
+	EndTime      time.Time `json:"end_time"`
 }
 
 // headliner json
@@ -92,8 +93,9 @@ func (uDB *UhpDB) GetEvents() ([]Event, error) {
 }
 
 func (uDB *UhpDB) CreateEvent(event Event) (*Event, error) {
-	query := `INSERT INTO events_t (headliner, openers, image_url, location_name, location_url, ticket_url, start_time, end_time, date) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);`
+	query := `INSERT INTO events_t (headliner, openers, image_url, location_name, location_url, ticket_url, start_time, end_time) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);`
 	if _, err := uDB.Exec(query, event.Headliner, event.Openers, event.ImageURL, event.LocationName, event.LocationURL, event.TicketURL, event.StartTime, event.EndTime); err != nil {
+		log.Info(err)
 		return nil, e.ErrDB
 	}
 	return &event, nil
