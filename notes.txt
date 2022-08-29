@@ -1,0 +1,45 @@
+brew services start postgresql
+psql => log into postgres
+\l => show databases
+\du => show users
+\connect uhpdb => connect to database
+\dt => show tables
+\d merch_t => describe table
+
+stripe listen --forward-to localhost:5001/webhook
+
+https://stripe.com/docs/payments/checkout/fulfill-orders
+
+https://stripe.com/docs/webhooks/signatures
+
+featured_songs_t queries
+backend email api (rate limiting) => https://dev.mailjet.com/email/guides/send-api-v31/ 
+implement correct rate limiting for each endpoint
+
+/event POST
+
+{
+    "headliner": {
+        "name": "Shelbe",
+        "url": "www.shlebe.com"
+    },
+    "openers": [
+        {
+            "sequence": "1",
+            "name": "Yespeez",
+            "url": "www.yespeez.com"
+        },
+        {
+            "sequence": "2",
+            "name": "Zach",
+            "url": "www.Zachattack.com"
+        }
+    ],
+    "image_url": "www.randomS3bucket.com",
+    "location_name": "The Fruit",
+    "location_url": "www.locationurl.com",
+    "ticket_url": "www.ticketurl.com",
+    "start_time": "2022-08-30T21:00:00Z",
+    "end_time": "2022-08-31T02:00:00Z"
+}
+

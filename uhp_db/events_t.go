@@ -7,26 +7,21 @@ import (
 	"errors"
 	"time"
 
-	e "github.com/akleventis/united_house_server/errors"
+	"github.com/akleventis/united_house_server/lib"
 	log "github.com/sirupsen/logrus"
 )
 
-type Headliner struct {
-	Name string `json:"name"`
-	URL  string `json:"url"`
-}
+type Openers []*Artist
 
-type Openers []*DJ
-
-type DJ struct {
-	Order string
-	Name  string
-	Url   string
+type Artist struct {
+	Name     string `json:"name"`
+	Url      string `json:"url"`
+	Sequence int    `json:"sequence"`
 }
 
 type Event struct {
-	ID           int       `json:"id"`
-	Headliner    Headliner `json:"headliner"`
+	ID           int       `json:"id,omitempty"`
+	Headliner    Artist    `json:"headliner"`
 	Openers      Openers   `json:"openers"`
 	ImageURL     string    `json:"image_url"`
 	LocationName string    `json:"location_name"`
@@ -35,22 +30,6 @@ type Event struct {
 	StartTime    time.Time `json:"start_time"`
 	EndTime      time.Time `json:"end_time"`
 }
-
-// headliner json
-// {
-// 	"name": "Beebo",
-// 	"url": "https://instagram.com/BEEBO_MUSIC/"
-// }
-
-// openers json
-// [{
-//		"order": "1",
-// 		"name": "Beebo",
-// 		"url": "https://instagram.com/BEEBO_MUSIC/"
-// 	},
-// 	{
-// 		etc..
-// 	}]
 
 // Desc events_t
 // Column       |            Type             | Collation | Nullable |               Default
@@ -73,7 +52,7 @@ func (uDB *UhpDB) GetEvents() ([]Event, error) {
 	query := `SELECT * FROM events_t;`
 	rows, err := uDB.Query(query)
 	if err != nil {
-		return nil, e.ErrDB
+		return nil, lib.ErrDB
 	}
 	defer rows.Close()
 	for rows.Next() {
@@ -81,40 +60,15 @@ func (uDB *UhpDB) GetEvents() ([]Event, error) {
 		err := rows.Scan(&event.ID, &event.Headliner, &event.Openers, &event.ImageURL, &event.LocationName, &event.LocationURL, &event.TicketURL, &event.StartTime, &event.EndTime)
 		if err != nil {
 			log.Info(err)
-			return nil, e.ErrDB
+			return nil, lib.ErrDB
 		}
 		events = append(events, event)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, lib.ErrDB
 	}
 
 	return events, nil
-}
-
-func (uDB *UhpDB) CreateEvent(event Event) (*Event, error) {
-	query := `INSERT INTO events_t (headliner, openers, image_url, location_name, location_url, ticket_url, start_time, end_time) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);`
-	if _, err := uDB.Exec(query, event.Headliner, event.Openers, event.ImageURL, event.LocationName, event.LocationURL, event.TicketURL, event.StartTime, event.EndTime); err != nil {
-		log.Info(err)
-		return nil, e.ErrDB
-	}
-	return &event, nil
-}
-
-func (uDB *UhpDB) UpdateEvent(event *Event) (*Event, error) {
-	query := `UPDATE events_t SET headliner=$1, openers=$2, image_url=$3, location_name=$4, location_url=$5, ticket_url=$6, start_time=$7, end_time=$8;`
-	if _, err := uDB.Exec(query, event.Headliner, event.Openers, event.ImageURL, event.LocationName, event.LocationURL, event.TicketURL, event.StartTime, event.EndTime); err != nil {
-		return nil, e.ErrDB
-	}
-	return event, nil
-}
-
-func (uDB *UhpDB) DeleteEvent(id string) error {
-	query := `DELETE FROM events_t WHERE id=$1;`
-	if _, err := uDB.Exec(query, id); err != nil {
-		return err
-	}
-	return nil
 }
 
 func (uDB *UhpDB) GetEvent(id string) (*Event, error) {
@@ -125,19 +79,47 @@ func (uDB *UhpDB) GetEvent(id string) (*Event, error) {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
-		log.Info(err)
-		return nil, e.ErrDB
+		return nil, lib.ErrDB
 	}
 
 	return &event, nil
 }
 
-// Headliner struct implements the driver.Value interface (https://pkg.go.dev/database/sql/driver#Valuer)
-func (h Headliner) Value() (driver.Value, error) {
-	return json.Marshal(h)
+func (uDB *UhpDB) CreateEvent(event Event) (*Event, error) {
+	query := `INSERT INTO events_t (headliner, openers, image_url, location_name, location_url, ticket_url, start_time, end_time) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);`
+	if _, err := uDB.Exec(query, event.Headliner, event.Openers, event.ImageURL, event.LocationName, event.LocationURL, event.TicketURL, event.StartTime, event.EndTime); err != nil {
+		return nil, lib.ErrDB
+	}
+	// Grab auto-generated id
+	// query = `SELECT id FROM events_t WHERE image_url=$1 and location_name=$2 and location_url=$3 and ticket_url=$4 and start_time=$5 and end_time=$6 LIMIT 1;`
+	// if err := uDB.QueryRow(query, event.ImageURL, event.LocationName, event.LocationURL, event.TicketURL, event.StartTime, event.EndTime).Scan(&event.ID); err != nil {
+	// 	return nil, lib.ErrDB
+	// }
+	return &event, nil
 }
 
-func (a *Headliner) Scan(v interface{}) error {
+func (uDB *UhpDB) UpdateEvent(event *Event) (*Event, error) {
+	query := `UPDATE events_t SET headliner=$1, openers=$2, image_url=$3, location_name=$4, location_url=$5, ticket_url=$6, start_time=$7, end_time=$8 WHERE id=$9;`
+	if _, err := uDB.Exec(query, event.Headliner, event.Openers, event.ImageURL, event.LocationName, event.LocationURL, event.TicketURL, event.StartTime, event.EndTime, event.ID); err != nil {
+		return nil, lib.ErrDB
+	}
+	return event, nil
+}
+
+func (uDB *UhpDB) DeleteEvent(id string) error {
+	query := `DELETE FROM events_t WHERE id=$1;`
+	if _, err := uDB.Exec(query, id); err != nil {
+		return lib.ErrDB
+	}
+	return nil
+}
+
+// Artist struct implement driver.Value interface (https://pkg.go.dev/database/sql/driver#Valuer)
+func (a Artist) Value() (driver.Value, error) {
+	return json.Marshal(a)
+}
+
+func (a *Artist) Scan(v interface{}) error {
 	b, ok := v.([]byte)
 	if len(b) == 0 {
 		return nil
@@ -149,7 +131,7 @@ func (a *Headliner) Scan(v interface{}) error {
 	return json.Unmarshal(b, &a)
 }
 
-// Openers struct implements the driver.Value interface (https://pkg.go.dev/database/sql/driver#Valuer)
+// Openers struct implement driver.Value interface (https://pkg.go.dev/database/sql/driver#Valuer)
 func (o Openers) Value() (driver.Value, error) {
 	return json.Marshal(o)
 }

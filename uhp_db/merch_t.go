@@ -4,8 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	e "github.com/akleventis/united_house_server/errors"
-	"github.com/stripe/stripe-go/product"
+	lib "github.com/akleventis/united_house_server/lib"
 )
 
 type Product struct {
@@ -37,15 +36,8 @@ func (uDB *UhpDB) GetProduct(id string) (*Product, error) {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
-		return nil, e.ErrDB
+		return nil, lib.ErrDB
 	}
-
-	// get product image from Stripe
-	pInfo, _ := product.Get(p.ID, nil)
-	if len(pInfo.Images) > 0 {
-		p.ImageURL = pInfo.Images[0]
-	}
-
 	return &p, nil
 }
 
@@ -54,7 +46,7 @@ func (uDB *UhpDB) UpdateProduct(p *Product) (*Product, error) {
 	// string format price 2 decimal precision
 	query := fmt.Sprintf(`UPDATE merch_t SET name=$1, size=$2, price=%.2f, quantity=$3 WHERE id=$4;`, p.Price)
 	if _, err := uDB.Exec(query, p.Name, p.Size, p.Quantity, p.ID); err != nil {
-		return nil, e.ErrDB
+		return nil, lib.ErrDB
 	}
 	return p, nil
 }
@@ -63,7 +55,7 @@ func (uDB *UhpDB) UpdateProduct(p *Product) (*Product, error) {
 func (uDB *UhpDB) DeleteProduct(id string) error {
 	query := `DELETE FROM merch_t WHERE id=$1;`
 	if _, err := uDB.Exec(query, id); err != nil {
-		return e.ErrDB
+		return lib.ErrDB
 	}
 	return nil
 }
@@ -72,7 +64,7 @@ func (uDB *UhpDB) DeleteProduct(id string) error {
 func (uDB *UhpDB) CreateProduct(p Product) (*Product, error) {
 	query := `INSERT INTO merch_t (id, name, size, price, quantity) VALUES ($1, $2, $3, $4, $5, $6);`
 	if _, err := uDB.Exec(query, p.ID, p.Name, p.Size, p.Price, p.Quantity); err != nil {
-		return nil, e.ErrDB
+		return nil, lib.ErrDB
 	}
 	return &p, nil
 }
@@ -84,26 +76,21 @@ func (uDB *UhpDB) GetProducts() ([]Product, error) {
 	query := `SELECT * FROM merch_t;`
 	rows, err := uDB.Query(query)
 	if err != nil {
-		return nil, e.ErrDB
+		return nil, lib.ErrDB
 	}
 	defer rows.Close()
 	for rows.Next() {
 		p := Product{}
 		err := rows.Scan(&p.ID, &p.Name, &p.Size, &p.Price, &p.Quantity)
 		if err != nil {
-			return nil, e.ErrDB
+			return nil, lib.ErrDB
 		}
 
-		// get image url
-		pInfo, _ := product.Get(p.ID, nil)
-		if len(pInfo.Images) > 0 {
-			p.ImageURL = pInfo.Images[0]
-		}
 		products = append(products, p)
 	}
 	err = rows.Err()
 	if err != nil {
-		return nil, err
+		return nil, lib.ErrDB
 	}
 
 	return products, nil
@@ -117,18 +104,13 @@ func (uDB *UhpDB) GetOrder(id string, quantity int) (*Product, error) {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
-		return nil, e.ErrDB
+		return nil, lib.ErrDB
 	}
 	// if req quantity > in stock return product and error so we can tell front end how much in-stock
 	if p.Quantity < quantity {
-		return &p, e.ErrOutOfStock
+		return &p, lib.ErrOutOfStock
 	}
 	p.Quantity = quantity
-
-	pInfo, _ := product.Get(p.ID, nil)
-	if len(pInfo.Images) > 0 {
-		p.ImageURL = pInfo.Images[0]
-	}
 
 	return &p, nil
 }
@@ -137,7 +119,7 @@ func (uDB *UhpDB) GetOrder(id string, quantity int) (*Product, error) {
 func (uDB *UhpDB) UpdateQuantity(id string, quantity int) error {
 	query := `UPDATE merch_t SET quantity=quantity-$1 WHERE id=$2;`
 	if _, err := uDB.Exec(query, quantity, id); err != nil {
-		return e.ErrDB
+		return lib.ErrDB
 	}
 	return nil
 }

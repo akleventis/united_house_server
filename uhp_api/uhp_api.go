@@ -5,6 +5,11 @@ import (
 	"os"
 
 	m "github.com/akleventis/united_house_server/middleware"
+	checkout "github.com/akleventis/united_house_server/uhp_api/handlers/checkout"
+	email "github.com/akleventis/united_house_server/uhp_api/handlers/email"
+	events "github.com/akleventis/united_house_server/uhp_api/handlers/events"
+	featured_artists "github.com/akleventis/united_house_server/uhp_api/handlers/featured_artists"
+	products "github.com/akleventis/united_house_server/uhp_api/handlers/products"
 	"github.com/akleventis/united_house_server/uhp_db"
 	"github.com/gorilla/mux"
 
@@ -13,13 +18,8 @@ import (
 	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
 	stripe "github.com/stripe/stripe-go"
+	gomail "gopkg.in/gomail.v2"
 )
-
-type server struct {
-	// db     merchdb.Datastore => unit testing w/ testclient
-	db     *uhp_db.UhpDB
-	router *mux.Router
-}
 
 func main() {
 	if err := godotenv.Load("../.env"); err != nil {
@@ -34,39 +34,41 @@ func main() {
 	}
 	defer db.DB.Close()
 
-	s := &server{
-		db:     db,
-		router: mux.NewRouter(),
-	}
+	router := mux.NewRouter()
 
 	// stripe
-	s.router.HandleFunc("/checkout", m.Limit(s.HandleCheckout())).Methods("POST")
-	s.router.HandleFunc("/webhook", m.Limit(s.HandleWebhook())).Methods("POST")
+	checkout := checkout.NewHandler(db)
+	router.HandleFunc("/checkout", m.Limit(checkout.HandleCheckout(), m.RL10)).Methods("POST")
+	router.HandleFunc("/webhook", m.Limit(checkout.HandleWebhook(), m.RL10)).Methods("POST")
 
 	// products
-	s.router.HandleFunc("/products", m.Limit(s.GetProducts())).Methods("GET")
-	// admin only
-	s.router.HandleFunc("/product/{id}", m.Limit(m.Auth(s.GetProduct()))).Methods("GET")
-	s.router.HandleFunc("/product", m.Limit(m.Auth(s.CreateProduct()))).Methods("POST")
-	s.router.HandleFunc("/product/{id}", m.Limit(m.Auth(s.UpdateProduct()))).Methods("PATCH")
-	s.router.HandleFunc("/product/{id}", m.Limit(m.Auth(s.DeleteProduct()))).Methods("DELETE")
+	products := products.NewHandler(db)
+	router.HandleFunc("/products", m.Limit(products.GetProducts(), m.RL50)).Methods("GET")
+	router.HandleFunc("/product/{id}", m.Limit(m.Auth(products.GetProduct()), m.RL30)).Methods("GET")       // admin
+	router.HandleFunc("/product", m.Limit(m.Auth(products.CreateProduct()), m.RL30)).Methods("POST")        // admin
+	router.HandleFunc("/product/{id}", m.Limit(m.Auth(products.UpdateProduct()), m.RL30)).Methods("PATCH")  // admin
+	router.HandleFunc("/product/{id}", m.Limit(m.Auth(products.DeleteProduct()), m.RL30)).Methods("DELETE") // admin
 
-	// TODO
 	// events
-	s.router.HandleFunc("/events", m.Limit(s.GetEvents())).Methods("GET")
-	s.router.HandleFunc("/event/{id}", m.Limit(s.GetEvent())).Methods("GET")
-	// admin only
-	s.router.HandleFunc("/event", m.Limit(m.Auth(s.CreateEvent()))).Methods("POST")
-	s.router.HandleFunc("/event/{id}", m.Limit(m.Auth(s.UpdateEvent()))).Methods("PATCH")
-	s.router.HandleFunc("/event/{id}", m.Limit(m.Auth(s.DeleteEvent()))).Methods("DELETE")
+	events := events.NewHandler(db)
+	router.HandleFunc("/events", m.Limit(events.GetEvents(), m.RL50)).Methods("GET")
+	router.HandleFunc("/event/{id}", m.Limit(events.GetEvent(), m.RL50)).Methods("GET")
+	router.HandleFunc("/event", m.Limit(m.Auth(events.CreateEvent()), m.RL30)).Methods("POST")        // admin
+	router.HandleFunc("/event/{id}", m.Limit(m.Auth(events.UpdateEvent()), m.RL30)).Methods("PATCH")  // admin
+	router.HandleFunc("/event/{id}", m.Limit(m.Auth(events.DeleteEvent()), m.RL30)).Methods("DELETE") // admin
 
-	// featured artists (soundcloud)
-	// s.router.HandleFunc("/artists", m.Limit(s.GetArtists())).Methods("GET")
-	// admin only
-	// s.router.HandleFunc("/artist", m.Limit(m.Auth(s.CreateArtist()))).Methods("POST")
-	// s.router.HandleFunc("/artist/{id}", m.Limit(m.Auth(s.UpdateArtist()))).Methods("PATCH")
-	// s.router.HandleFunc("/artist/{id}", m.Limit(m.Auth(s.DeleteArtist()))).Methods("DELETE")
+	// featured artist soundcloud iframe
+	fa := featured_artists.NewHandler(db)
+	router.HandleFunc("/featured_artists", m.Limit(fa.GetFeaturedArtists(), m.RL50)).Methods("GET")
+	router.HandleFunc("/featured_artist", m.Limit(m.Auth(fa.CreateFeaturedArtist()), m.RL30)).Methods("POST")        // admin
+	router.HandleFunc("/featured_artist/{id}", m.Limit(m.Auth(fa.UpdateFeaturedArtist()), m.RL30)).Methods("PATCH")  // admin
+	router.HandleFunc("/featured_artist/{id}", m.Limit(m.Auth(fa.DeleteFeaturedArtist()), m.RL30)).Methods("DELETE") // admin
 
-	handler := cors.Default().Handler(s.router)
+	// email
+	mc := gomail.NewMessage()
+	email := email.NewHandler(mc)
+	router.HandleFunc("/mail", m.Limit(email.SendEmail(), m.RL5)).Methods("POST")
+
+	handler := cors.Default().Handler(router)
 	http.ListenAndServe(":5001", handler)
 }

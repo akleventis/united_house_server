@@ -9,6 +9,14 @@ import (
 	"golang.org/x/time/rate"
 )
 
+const (
+	RL5   = 5
+	RL10  = 10
+	RL30  = 30
+	RL50  = 50
+	RL100 = 100
+)
+
 type ip struct {
 	limiter  *rate.Limiter
 	lastSeen time.Time
@@ -21,8 +29,8 @@ func init() {
 	go cleanUp()
 }
 
-// Limit IP's => 20 requests per minute
-func getIP(ipAddress string) *rate.Limiter {
+// Limit IP's: rl = requests per minute
+func getIP(ipAddress string, rl int) *rate.Limiter {
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -30,7 +38,7 @@ func getIP(ipAddress string) *rate.Limiter {
 	value, ok := ips[ipAddress]
 	if !ok {
 		rt := rate.Every(time.Minute)
-		limiter := rate.NewLimiter(rt, 100)
+		limiter := rate.NewLimiter(rt, rl)
 
 		ips[ipAddress] = &ip{limiter, time.Now()}
 		return limiter
@@ -57,7 +65,7 @@ func cleanUp() {
 }
 
 // ip address rate limiting
-func Limit(next http.HandlerFunc) http.HandlerFunc {
+func Limit(next http.HandlerFunc, rl int) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ip, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
@@ -65,7 +73,7 @@ func Limit(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		limiter := getIP(ip)
+		limiter := getIP(ip, rl)
 		if !limiter.Allow() {
 			http.Error(w, http.StatusText(429), http.StatusTooManyRequests)
 			return

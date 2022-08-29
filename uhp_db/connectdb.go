@@ -26,7 +26,8 @@ func (db *UhpDB) createMerchTable() error {
 		name VARCHAR( 50 ) NOT NULL,
 		size VARCHAR( 50 ) NOT NULL,
 		price NUMERIC NOT NULL,
-		quantity INT NOT NULL)`)
+		quantity INT NOT NULL
+	)`)
 	if err != nil {
 		return err
 	}
@@ -43,16 +44,16 @@ func (db *UhpDB) createMerchTable() error {
 //  location_url  | character varying(50) |           | not null |
 //  start_time    | character varying(50) |           |          |
 //  end_time      | character varying(50) |           |          |
-//  ticket_url    | character varying(50) |           | not null |
+//  ticket_url    | character varying(50) |           |          |
 func (db *UhpDB) createEventsTable() error {
 	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS events_t (
 		id SERIAL PRIMARY KEY,
 		headliner json NOT NULL,
 		openers json,
-		image_url VARCHAR(50) NOT NULL,
-		location_name VARCHAR(50) NOT NULL,
-		location_url VARCHAR(50) NOT NULL,
-		ticket_url VARCHAR(50), 
+		image_url VARCHAR( 50 ) NOT NULL,
+		location_name VARCHAR( 50 ) NOT NULL,
+		location_url VARCHAR( 50 ) NOT NULL,
+		ticket_url VARCHAR( 50 ), 
 		start_time TIMESTAMP without time zone,
 		end_time TIMESTAMP without time zone
 	)`)
@@ -62,15 +63,21 @@ func (db *UhpDB) createEventsTable() error {
 	return nil
 }
 
-// uhpdb=# \d featured_songs_t;
+// uhpdb=# \d featured_artists_t;
+// Column         |         Type          | Collation | Nullable |                    Default
+// -----------------------+-----------------------+-----------+----------+------------------------------------------------
 //  id                    | integer               |           | not null | nextval('featured_artists_t_id_seq'::regclass)
 //  name                  | character varying(50) |           | not null |
-//  soundcloud_iframe_url | character varying(50) |           |          |
-func (db *UhpDB) createFeaturedArtistsTable() error {
-	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS featured_songs_t (
+//  redirect_url          | character varying(50) |           |          |
+//  soundcloud_iframe_url | character varying(50) |           | not null |
+//  sequence              | integer               |           | not null |
+func (db *UhpDB) createFeaturedSongsTable() error {
+	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS featured_artists_t (
 		id SERIAL PRIMARY KEY,
-		name VARCHAR(50) NOT NULL,
-		soundcloud_iframe_url VARCHAR(50)
+		name VARCHAR( 50 ) NOT NULL,
+		redirect_url VARCHAR( 50 ),
+		soundcloud_iframe_url VARCHAR( 50 ) NOT NULL,
+		sequence INT NOT NULL
 	)`)
 	if err != nil {
 		return err
@@ -129,7 +136,7 @@ func Open() (*UhpDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = pDB.createFeaturedArtistsTable()
+	err = pDB.createFeaturedSongsTable()
 	if err != nil {
 		return nil, err
 	}

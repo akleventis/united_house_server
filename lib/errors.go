@@ -1,4 +1,4 @@
-package errors
+package lib
 
 import "errors"
 
@@ -14,4 +14,10 @@ var (
 
 	// 500s
 	ErrInvalidArgJsonBody = errors.New("INVALID_JSON")
+
+	// STRIPE
+	ErrStripeImage = errors.New("STRIPE_IMAGE_ERROR")
+
+	// Email
+	ErrEmail = errors.New("EMAIL_ERROR")
 )
