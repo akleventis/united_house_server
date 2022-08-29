@@ -2,27 +2,27 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
-	"os"
 
 	"github.com/akleventis/united_house_server/lib"
+	"github.com/mailjet/mailjet-apiv3-go"
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/gomail.v2"
 )
 
 type Handler struct {
-	mc *gomail.Message
+	mc *mailjet.Client
 }
 
-func NewHandler(mc *gomail.Message) *Handler {
+func NewHandler(mc *mailjet.Client) *Handler {
 	return &Handler{
 		mc: mc,
 	}
 }
 
-// https://www.courier.com/guides/golang-send-email/
 type Email struct {
-	From string `json:"name"`
+	Name string `json:"name"`
+	From string `json:"from"`
 	Body string `json:"body"`
 }
 
@@ -33,18 +33,33 @@ func (h *Handler) SendEmail() http.HandlerFunc {
 			http.Error(w, lib.ErrInvalidArgJsonBody.Error(), http.StatusBadRequest)
 			return
 		}
-		h.mc.SetHeader("From", email.From)
-		h.mc.SetHeader("To", "unitedhouseproductions@gmail.com")
-		h.mc.SetBody("text/html", email.Body)
-
-		n := gomail.NewDialer("smtp.gmail.com", 587, os.Getenv("MAIL_KEY"), os.Getenv("MAIL_PW"))
-
-		// Send the email
-		if err := n.DialAndSend(h.mc); err != nil {
-			log.Info(err)
+		messagesInfo := []mailjet.InfoMessagesV31{
+			{
+				From: &mailjet.RecipientV31{
+					Email: "unitedhouseproductions@gmail.com",
+					Name:  "Booking",
+				},
+				To: &mailjet.RecipientsV31{
+					mailjet.RecipientV31{
+						Email: "unitedhouseproductions@gmail.com",
+						Name:  "Paul",
+					},
+				},
+				Subject: "Booking Inquiry",
+				HTMLPart: fmt.Sprintf(`<big>Email from %s:</big>
+										<br/><br/>
+										<big><i>&emsp;%s</i></big>
+										<br/><br/>
+										<big>You can reach %s back at %s</big>`, email.Name, email.Body, email.Name, email.From),
+			},
+		}
+		messages := mailjet.MessagesV31{Info: messagesInfo}
+		res, err := h.mc.SendMailV31(&messages)
+		if err != nil {
 			http.Error(w, lib.ErrEmail.Error(), http.StatusInternalServerError)
 			return
 		}
+		log.Infof("Data: %+v\n", res)
 		lib.ApiResponse(w, http.StatusAccepted, "message sent")
 	}
 }

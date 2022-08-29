@@ -12,13 +12,13 @@ import (
 	products "github.com/akleventis/united_house_server/uhp_api/handlers/products"
 	"github.com/akleventis/united_house_server/uhp_db"
 	"github.com/gorilla/mux"
+	"github.com/mailjet/mailjet-apiv3-go"
 
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
 	stripe "github.com/stripe/stripe-go"
-	gomail "gopkg.in/gomail.v2"
 )
 
 func main() {
@@ -35,7 +35,6 @@ func main() {
 	defer db.DB.Close()
 
 	router := mux.NewRouter()
-
 	// stripe
 	checkout := checkout.NewHandler(db)
 	router.HandleFunc("/checkout", m.Limit(checkout.HandleCheckout(), m.RL10)).Methods("POST")
@@ -65,8 +64,8 @@ func main() {
 	router.HandleFunc("/featured_artist/{id}", m.Limit(m.Auth(fa.DeleteFeaturedArtist()), m.RL30)).Methods("DELETE") // admin
 
 	// email
-	mc := gomail.NewMessage()
-	email := email.NewHandler(mc)
+	mailjetClient := mailjet.NewMailjetClient(os.Getenv("MAILJET_KEY"), os.Getenv("MAILJET_SECRET"))
+	email := email.NewHandler(mailjetClient)
 	router.HandleFunc("/mail", m.Limit(email.SendEmail(), m.RL5)).Methods("POST")
 
 	handler := cors.Default().Handler(router)
