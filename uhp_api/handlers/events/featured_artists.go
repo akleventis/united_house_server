@@ -10,21 +10,12 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type Handler struct {
-	db *uhp_db.UhpDB
-}
-
-func NewHandler(db *uhp_db.UhpDB) *Handler {
-	return &Handler{
-		db: db,
-	}
-}
-
 func (h *Handler) GetFeaturedArtists() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		songs, err := h.db.GetFeaturedArtists()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 		lib.ApiResponse(w, http.StatusOK, songs)
 	}
@@ -41,7 +32,7 @@ func (h *Handler) GetFeaturedArtists() http.HandlerFunc {
 
 // 		artist, err := h.db.GetFeaturedArtist(id)
 // 		if err != nil {
-// 			http.Error(w, lib.ErrDB.Error(), http.StatusInternalServerError)
+// 			http.Error(w, err.Error(), http.StatusInternalServerError)
 // 			return
 // 		}
 // 		lib.ApiResponse(w, http.StatusOK, artist)
@@ -88,10 +79,12 @@ func (h *Handler) UpdateFeaturedArtist() http.HandlerFunc {
 			http.Error(w, lib.ErrInvalidArgJsonBody.Error(), http.StatusBadRequest)
 			return
 		}
+
 		// prevent client from modifying id
 		intID, err := strconv.Atoi(id)
 		if err != nil {
 			http.Error(w, lib.ErrInvalidID.Error(), http.StatusBadRequest)
+			return
 		}
 		updateFeatureArtist.ID = intID
 

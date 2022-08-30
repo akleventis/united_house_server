@@ -8,7 +8,6 @@ import (
 	checkout "github.com/akleventis/united_house_server/uhp_api/handlers/checkout"
 	email "github.com/akleventis/united_house_server/uhp_api/handlers/email"
 	events "github.com/akleventis/united_house_server/uhp_api/handlers/events"
-	featured_artists "github.com/akleventis/united_house_server/uhp_api/handlers/featured_artists"
 	products "github.com/akleventis/united_house_server/uhp_api/handlers/products"
 	"github.com/akleventis/united_house_server/uhp_db"
 	"github.com/gorilla/mux"
@@ -57,11 +56,10 @@ func main() {
 	router.HandleFunc("/event/{id}", m.Limit(m.Auth(events.DeleteEvent()), m.RL30)).Methods("DELETE") // admin
 
 	// featured artist soundcloud iframe
-	fa := featured_artists.NewHandler(db)
-	router.HandleFunc("/featured_artists", m.Limit(fa.GetFeaturedArtists(), m.RL50)).Methods("GET")
-	router.HandleFunc("/featured_artist", m.Limit(m.Auth(fa.CreateFeaturedArtist()), m.RL30)).Methods("POST")        // admin
-	router.HandleFunc("/featured_artist/{id}", m.Limit(m.Auth(fa.UpdateFeaturedArtist()), m.RL30)).Methods("PATCH")  // admin
-	router.HandleFunc("/featured_artist/{id}", m.Limit(m.Auth(fa.DeleteFeaturedArtist()), m.RL30)).Methods("DELETE") // admin
+	router.HandleFunc("/featured_artists", m.Limit(events.GetFeaturedArtists(), m.RL50)).Methods("GET")
+	router.HandleFunc("/featured_artist", m.Limit(m.Auth(events.CreateFeaturedArtist()), m.RL30)).Methods("POST")        // admin
+	router.HandleFunc("/featured_artist/{id}", m.Limit(m.Auth(events.UpdateFeaturedArtist()), m.RL30)).Methods("PATCH")  // admin
+	router.HandleFunc("/featured_artist/{id}", m.Limit(m.Auth(events.DeleteFeaturedArtist()), m.RL30)).Methods("DELETE") // admin
 
 	// email
 	mailjetClient := mailjet.NewMailjetClient(os.Getenv("MAILJET_KEY"), os.Getenv("MAILJET_SECRET"))

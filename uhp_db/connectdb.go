@@ -21,43 +21,35 @@ type UhpDB struct {
 //  price    | numeric               |           | not null |
 //  quantity | integer               |           | not null |
 func (db *UhpDB) createMerchTable() error {
-	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS merch_t (
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS merch_t (
 		id VARCHAR( 50 ) PRIMARY KEY NOT NULL,
 		name VARCHAR( 50 ) NOT NULL,
 		size VARCHAR( 50 ) NOT NULL,
 		price NUMERIC NOT NULL,
 		quantity INT NOT NULL
-	)`)
-	if err != nil {
+		)`); err != nil {
 		return err
 	}
-
 	return nil
 }
 
-// uhpdb=# \d events_t;
-//  id            | integer               |           | not null | nextval('events_t_id_seq'::regclass)
-//  headliner     | json                  |           | not null |
-//  openers       | json                  |           |          |
-//  image_url     | character varying(50) |           | not null |
-//  location_name | character varying(50) |           | not null |
-//  location_url  | character varying(50) |           | not null |
-//  start_time    | character varying(50) |           |          |
-//  end_time      | character varying(50) |           |          |
-//  ticket_url    | character varying(50) |           |          |
-func (db *UhpDB) createEventsTable() error {
-	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS events_t (
-		id SERIAL PRIMARY KEY,
-		headliner json NOT NULL,
-		openers json,
-		image_url VARCHAR( 50 ) NOT NULL,
-		location_name VARCHAR( 50 ) NOT NULL,
-		location_url VARCHAR( 50 ) NOT NULL,
-		ticket_url VARCHAR( 50 ), 
-		start_time TIMESTAMP without time zone,
-		end_time TIMESTAMP without time zone
-	)`)
-	if err != nil {
+// uhpdb=# \d artists_t;
+// Column |         Type          | Collation | Nullable |                Default
+// --------+-----------------------+-----------+----------+---------------------------------------
+//  id     | integer               |           | not null | nextval('artists_t_id_seq'::regclass)
+//  name   | character varying(50) |           | not null |
+//  url    | character varying(50) |           |          |
+// Indexes:
+//     "artists_t_pkey" PRIMARY KEY, btree (id)
+// Referenced by:
+//     TABLE "events_t" CONSTRAINT "events_t_headliner_id_fkey" FOREIGN KEY (headliner_id) REFERENCES artists_t(id)
+//     TABLE "featured_artists_t" CONSTRAINT "featured_artists_t_artist_id_fkey" FOREIGN KEY (artist_id) REFERENCES artists_t(id)
+func (db *UhpDB) createArtistsTable() error {
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS artists_t (
+			id SERIAL PRIMARY KEY,
+			name VARCHAR( 50 ) NOT NULL,
+			url VARCHAR( 50 )
+		)`); err != nil {
 		return err
 	}
 	return nil
@@ -67,19 +59,49 @@ func (db *UhpDB) createEventsTable() error {
 // Column         |         Type          | Collation | Nullable |                    Default
 // -----------------------+-----------------------+-----------+----------+------------------------------------------------
 //  id                    | integer               |           | not null | nextval('featured_artists_t_id_seq'::regclass)
-//  name                  | character varying(50) |           | not null |
-//  redirect_url          | character varying(50) |           |          |
+//  artist                | json                  |           | not null |
 //  soundcloud_iframe_url | character varying(50) |           | not null |
 //  sequence              | integer               |           | not null |
-func (db *UhpDB) createFeaturedSongsTable() error {
-	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS featured_artists_t (
+// Indexes:
+//     "featured_artists_t_pkey" PRIMARY KEY, btree (id)
+func (db *UhpDB) createFeaturedArtistsTable() error {
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS featured_artists_t (
 		id SERIAL PRIMARY KEY,
-		name VARCHAR( 50 ) NOT NULL,
-		redirect_url VARCHAR( 50 ),
+		artist json NOT NULL,
 		soundcloud_iframe_url VARCHAR( 50 ) NOT NULL,
 		sequence INT NOT NULL
-	)`)
-	if err != nil {
+		)`); err != nil {
+		return err
+	}
+	return nil
+}
+
+// uhpdb=# \d events_t;
+// Column     |            Type             | Collation | Nullable |               Default
+// ---------------+-----------------------------+-----------+----------+--------------------------------------
+//  id            | integer                     |           | not null | nextval('events_t_id_seq'::regclass)
+//  headliner_id  | json                        |           | not null |
+//  openers       | json                        |           |          |
+//  image_url     | character varying(50)       |           | not null |
+//  location_name | character varying(50)       |           | not null |
+//  location_url  | character varying(50)       |           | not null |
+//  ticket_url    | character varying(50)       |           |          |
+//  start_time    | timestamp without time zone |           |          |
+//  end_time      | timestamp without time zone |           |          |
+// Indexes:
+//     "events_t_pkey" PRIMARY KEY, btree (id)
+func (db *UhpDB) createEventsTable() error {
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS events_t (
+		id SERIAL PRIMARY KEY,
+		headliner_id json NOT NULL,
+		openers json,
+		image_url VARCHAR( 50 ) NOT NULL,
+		location_name VARCHAR( 50 ) NOT NULL,
+		location_url VARCHAR( 50 ) NOT NULL,
+		ticket_url VARCHAR( 50 ), 
+		start_time TIMESTAMP without time zone,
+		end_time TIMESTAMP without time zone
+		)`); err != nil {
 		return err
 	}
 	return nil
@@ -107,8 +129,7 @@ func Open() (*UhpDB, error) {
 		return nil, err
 	}
 
-	err = db.Ping()
-	if err != nil {
+	if err = db.Ping(); err != nil {
 		return nil, err
 	}
 
@@ -118,26 +139,27 @@ func Open() (*UhpDB, error) {
 
 	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelfunc()
-	err = db.PingContext(ctx)
-	if err != nil {
+
+	if err = db.PingContext(ctx); err != nil {
 		return nil, err
 	}
+
 	log.Printf("%s database connected", dbName)
 
 	pDB := &UhpDB{
 		db,
 	}
 
-	err = pDB.createMerchTable()
-	if err != nil {
+	if err = pDB.createMerchTable(); err != nil {
 		return nil, err
 	}
-	err = pDB.createEventsTable()
-	if err != nil {
+	if err = pDB.createArtistsTable(); err != nil {
 		return nil, err
 	}
-	err = pDB.createFeaturedSongsTable()
-	if err != nil {
+	if err = pDB.createFeaturedArtistsTable(); err != nil {
+		return nil, err
+	}
+	if err = pDB.createEventsTable(); err != nil {
 		return nil, err
 	}
 
