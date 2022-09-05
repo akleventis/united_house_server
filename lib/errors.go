@@ -20,4 +20,8 @@ var (
 
 	// Email
 	ErrEmail = errors.New("EMAIL_ERROR")
+
+	// IMAGES
+	ErrImageFile     = errors.New("IMAGE_FILE_ERROR")
+	ErrImageTooLarge = errors.New("IMAGE_MUST_BE_LESS_THAN_3_MEGABYTES")
 )

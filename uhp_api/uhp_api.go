@@ -8,13 +8,18 @@ import (
 	checkout "github.com/akleventis/united_house_server/uhp_api/handlers/checkout"
 	email "github.com/akleventis/united_house_server/uhp_api/handlers/email"
 	events "github.com/akleventis/united_house_server/uhp_api/handlers/events"
+	images "github.com/akleventis/united_house_server/uhp_api/handlers/images"
 	products "github.com/akleventis/united_house_server/uhp_api/handlers/products"
 	"github.com/akleventis/united_house_server/uhp_db"
-	"github.com/gorilla/mux"
-	"github.com/mailjet/mailjet-apiv3-go"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	aws_session "github.com/aws/aws-sdk-go/aws/session"
+
+	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"github.com/mailjet/mailjet-apiv3-go"
 	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
 	stripe "github.com/stripe/stripe-go"
@@ -25,15 +30,29 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
-	stripe.Key = os.Getenv("STRIPE_KEY")
-
 	db, err := uhp_db.Open()
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.DB.Close()
 
+	stripe.Key = os.Getenv("STRIPE_KEY")
+
+	awsRegion := os.Getenv("AWS_REGION")
+	awsAccess := os.Getenv("AWS_ACCESS_KEY_ID")
+	awsSecret := os.Getenv("AWS_SECRET_ACCESS_KEY")
+
+	s3Config := &aws.Config{
+		Region:      aws.String(awsRegion),
+		Credentials: credentials.NewStaticCredentials(awsAccess, awsSecret, ""),
+	}
+	s3Session, err := aws_session.NewSession(s3Config)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	router := mux.NewRouter()
+
 	// stripe
 	checkout := checkout.NewHandler(db)
 	router.HandleFunc("/checkout", m.Limit(checkout.HandleCheckout(), m.RL10)).Methods("POST")
@@ -65,6 +84,10 @@ func main() {
 	mailjetClient := mailjet.NewMailjetClient(os.Getenv("MAILJET_KEY"), os.Getenv("MAILJET_SECRET"))
 	email := email.NewHandler(mailjetClient)
 	router.HandleFunc("/mail", m.Limit(email.SendEmail(), m.RL5)).Methods("POST")
+
+	// aws s3 image upload
+	images := images.NewHandler(db, s3Session)
+	router.HandleFunc("/images/{key}", m.Limit(m.Auth(images.UploadImage()), m.RL10)).Methods("POST") // admin
 
 	handler := cors.Default().Handler(router)
 	http.ListenAndServe(":5001", handler)
