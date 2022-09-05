@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	aws_session "github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
@@ -41,15 +42,19 @@ func main() {
 	awsRegion := os.Getenv("AWS_REGION")
 	awsAccess := os.Getenv("AWS_ACCESS_KEY_ID")
 	awsSecret := os.Getenv("AWS_SECRET_ACCESS_KEY")
+	s3Bucket := os.Getenv("AWS_BUCKET")
 
 	s3Config := &aws.Config{
 		Region:      aws.String(awsRegion),
 		Credentials: credentials.NewStaticCredentials(awsAccess, awsSecret, ""),
 	}
+
 	s3Session, err := aws_session.NewSession(s3Config)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	s3Client := s3.New(s3Session)
 
 	router := mux.NewRouter()
 
@@ -86,8 +91,10 @@ func main() {
 	router.HandleFunc("/mail", m.Limit(email.SendEmail(), m.RL5)).Methods("POST")
 
 	// aws s3 image upload
-	images := images.NewHandler(db, s3Session)
-	router.HandleFunc("/images/{key}", m.Limit(m.Auth(images.UploadImage()), m.RL10)).Methods("POST") // admin
+	images := images.NewHandler(db, s3Client, s3Session, s3Bucket)
+	router.HandleFunc("/images", m.Limit(images.GetImage(), m.RL30)).Methods("GET")
+	router.HandleFunc("/images", m.Limit(m.Auth(images.UploadImage()), m.RL10)).Methods("POST")   // admin
+	router.HandleFunc("/images", m.Limit(m.Auth(images.DeleteImage()), m.RL10)).Methods("DELETE") // admin
 
 	handler := cors.Default().Handler(router)
 	http.ListenAndServe(":5001", handler)

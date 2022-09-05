@@ -24,4 +24,7 @@ var (
 	// IMAGES
 	ErrImageFile     = errors.New("IMAGE_FILE_ERROR")
 	ErrImageTooLarge = errors.New("IMAGE_MUST_BE_LESS_THAN_3_MEGABYTES")
+	ErrFormValue     = errors.New("INVALID_FORM_VALUE")
+	ErrFileType      = errors.New("FILE_TYPE_NOT_ALLOWED")
+	ErrNoImage       = errors.New("IMAGE_NOT_FOUND")
 )
