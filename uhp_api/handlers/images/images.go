@@ -14,7 +14,6 @@ import (
 	aws_session "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	log "github.com/sirupsen/logrus"
 )
 
 type s3ObjInput struct {
@@ -38,7 +37,6 @@ func NewHandler(db *uhp_db.UhpDB, s3Client *s3.S3, s3Session *aws_session.Sessio
 }
 
 func toMegaBytes(size int64) float64 {
-	log.Info("size: ", size)
 	return float64(size) / 1000000
 }
 
@@ -105,6 +103,7 @@ func (h *Handler) UploadImage() http.HandlerFunc {
 	}
 }
 
+// GetImage retrieves an image from s3 using key in form ("bmo.jpeg") and returns the base64 encoded image
 func (h *Handler) GetImage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var s3Obj *s3ObjInput
@@ -131,6 +130,7 @@ func (h *Handler) GetImage() http.HandlerFunc {
 	}
 }
 
+// DeleteImage removes an image from the s3 bucket, returning 400 if key is not found
 func (h *Handler) DeleteImage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var s3Obj *s3ObjInput

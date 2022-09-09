@@ -68,7 +68,7 @@ func (db *UhpDB) createFeaturedArtistsTable() error {
 	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS featured_artists_t (
 		id SERIAL PRIMARY KEY,
 		artist json NOT NULL,
-		soundcloud_iframe_url VARCHAR( 50 ) NOT NULL,
+		soundcloud_iframe_url VARCHAR( 250 ) NOT NULL,
 		sequence INT NOT NULL
 		)`); err != nil {
 		return err
@@ -80,7 +80,7 @@ func (db *UhpDB) createFeaturedArtistsTable() error {
 // Column     |            Type             | Collation | Nullable |               Default
 // ---------------+-----------------------------+-----------+----------+--------------------------------------
 //  id            | integer                     |           | not null | nextval('events_t_id_seq'::regclass)
-//  headliner_id  | json                        |           | not null |
+//  headliner  | json                        |           | not null |
 //  openers       | json                        |           |          |
 //  image_url     | character varying(50)       |           | not null |
 //  location_name | character varying(50)       |           | not null |
@@ -93,12 +93,12 @@ func (db *UhpDB) createFeaturedArtistsTable() error {
 func (db *UhpDB) createEventsTable() error {
 	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS events_t (
 		id SERIAL PRIMARY KEY,
-		headliner_id json NOT NULL,
+		headliner json NOT NULL,
 		openers json,
-		image_url VARCHAR( 50 ) NOT NULL,
+		image_url VARCHAR( 250 ) NOT NULL,
 		location_name VARCHAR( 50 ) NOT NULL,
-		location_url VARCHAR( 50 ) NOT NULL,
-		ticket_url VARCHAR( 50 ), 
+		location_url VARCHAR( 250 ) NOT NULL,
+		ticket_url VARCHAR( 250 ), 
 		start_time TIMESTAMP without time zone,
 		end_time TIMESTAMP without time zone
 		)`); err != nil {

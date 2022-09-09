@@ -5,6 +5,7 @@ import (
 	"os"
 
 	m "github.com/akleventis/united_house_server/middleware"
+	artists "github.com/akleventis/united_house_server/uhp_api/handlers/artists"
 	checkout "github.com/akleventis/united_house_server/uhp_api/handlers/checkout"
 	email "github.com/akleventis/united_house_server/uhp_api/handlers/email"
 	events "github.com/akleventis/united_house_server/uhp_api/handlers/events"
@@ -80,10 +81,17 @@ func main() {
 	router.HandleFunc("/event/{id}", m.Limit(m.Auth(events.DeleteEvent()), m.RL30)).Methods("DELETE") // admin
 
 	// featured artist soundcloud iframe
-	router.HandleFunc("/featured_artists", m.Limit(events.GetFeaturedArtists(), m.RL50)).Methods("GET")
-	router.HandleFunc("/featured_artist", m.Limit(m.Auth(events.CreateFeaturedArtist()), m.RL30)).Methods("POST")        // admin
-	router.HandleFunc("/featured_artist/{id}", m.Limit(m.Auth(events.UpdateFeaturedArtist()), m.RL30)).Methods("PATCH")  // admin
-	router.HandleFunc("/featured_artist/{id}", m.Limit(m.Auth(events.DeleteFeaturedArtist()), m.RL30)).Methods("DELETE") // admin
+	artists := artists.NewHandler(db)
+	router.HandleFunc("/artist", m.Limit(artists.GetArtists(), m.RL50)).Methods("GET")
+	router.HandleFunc("/artist", m.Limit(m.Auth(artists.CreateArtist()), m.RL30)).Methods("POST")         // admin
+	router.HandleFunc("/artists", m.Limit(m.Auth(artists.GetArtist()), m.RL50)).Methods("GET")            // admin
+	router.HandleFunc("/artists/{id}", m.Limit(m.Auth(artists.UpdateArtist()), m.RL30)).Methods("PATCH")  // admin
+	router.HandleFunc("/artists/{id}", m.Limit(m.Auth(artists.DeleteArtist()), m.RL30)).Methods("DELETE") // admin
+
+	router.HandleFunc("/featured_artists", m.Limit(artists.GetFeaturedArtists(), m.RL50)).Methods("GET")
+	router.HandleFunc("/featured_artist", m.Limit(m.Auth(artists.CreateFeaturedArtist()), m.RL30)).Methods("POST")        // admin
+	router.HandleFunc("/featured_artist/{id}", m.Limit(m.Auth(artists.UpdateFeaturedArtist()), m.RL30)).Methods("PATCH")  // admin
+	router.HandleFunc("/featured_artist/{id}", m.Limit(m.Auth(artists.DeleteFeaturedArtist()), m.RL30)).Methods("DELETE") // admin
 
 	// email
 	mailjetClient := mailjet.NewMailjetClient(os.Getenv("MAILJET_KEY"), os.Getenv("MAILJET_SECRET"))

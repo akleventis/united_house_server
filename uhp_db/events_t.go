@@ -15,7 +15,7 @@ type Openers []*Artist
 
 type Event struct {
 	ID           int       `json:"id,omitempty"`
-	HeadlinerID  Artist    `json:"headliner_id"`
+	Headliner    Artist    `json:"headliner"`
 	Openers      Openers   `json:"openers"`
 	ImageURL     string    `json:"image_url"`
 	LocationName string    `json:"location_name"`
@@ -29,7 +29,7 @@ type Event struct {
 // Column     |            Type             | Collation | Nullable |               Default
 // ---------------+-----------------------------+-----------+----------+--------------------------------------
 //  id            | integer                     |           | not null | nextval('events_t_id_seq'::regclass)
-//  headliner_id  | json                        |           | not null |
+//  headliner     | json                        |           | not null |
 //  openers       | json                        |           |          |
 //  image_url     | character varying(50)       |           | not null |
 //  location_name | character varying(50)       |           | not null |
@@ -51,7 +51,7 @@ func (uDB *UhpDB) GetEvents() ([]Event, error) {
 	defer rows.Close()
 	for rows.Next() {
 		event := Event{}
-		err := rows.Scan(&event.ID, &event.HeadlinerID, &event.Openers, &event.ImageURL, &event.LocationName, &event.LocationURL, &event.TicketURL, &event.StartTime, &event.EndTime)
+		err := rows.Scan(&event.ID, &event.Headliner, &event.Openers, &event.ImageURL, &event.LocationName, &event.LocationURL, &event.TicketURL, &event.StartTime, &event.EndTime)
 		if err != nil {
 			log.Info(err)
 			return nil, lib.ErrDB
@@ -69,7 +69,7 @@ func (uDB *UhpDB) GetEvent(id string) (*Event, error) {
 	var event Event
 	query := `SELECT * FROM events_t WHERE id=$1 LIMIT 1;`
 
-	if err := uDB.QueryRow(query, id).Scan(&event.ID, &event.HeadlinerID, &event.Openers, &event.ImageURL, &event.LocationName, &event.LocationURL, &event.TicketURL, &event.StartTime, &event.EndTime); err != nil {
+	if err := uDB.QueryRow(query, id).Scan(&event.ID, &event.Headliner, &event.Openers, &event.ImageURL, &event.LocationName, &event.LocationURL, &event.TicketURL, &event.StartTime, &event.EndTime); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
@@ -81,7 +81,8 @@ func (uDB *UhpDB) GetEvent(id string) (*Event, error) {
 
 func (uDB *UhpDB) CreateEvent(event Event) (*Event, error) {
 	query := `INSERT INTO events_t (headliner, openers, image_url, location_name, location_url, ticket_url, start_time, end_time) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);`
-	if _, err := uDB.Exec(query, event.HeadlinerID, event.Openers, event.ImageURL, event.LocationName, event.LocationURL, event.TicketURL, event.StartTime, event.EndTime); err != nil {
+	if _, err := uDB.Exec(query, event.Headliner, event.Openers, event.ImageURL, event.LocationName, event.LocationURL, event.TicketURL, event.StartTime, event.EndTime); err != nil {
+		log.Info(err)
 		return nil, lib.ErrDB
 	}
 	// Grab auto-generated id
@@ -94,7 +95,7 @@ func (uDB *UhpDB) CreateEvent(event Event) (*Event, error) {
 
 func (uDB *UhpDB) UpdateEvent(event *Event) (*Event, error) {
 	query := `UPDATE events_t SET headliner=$1, openers=$2, image_url=$3, location_name=$4, location_url=$5, ticket_url=$6, start_time=$7, end_time=$8 WHERE id=$9;`
-	if _, err := uDB.Exec(query, event.HeadlinerID, event.Openers, event.ImageURL, event.LocationName, event.LocationURL, event.TicketURL, event.StartTime, event.EndTime, event.ID); err != nil {
+	if _, err := uDB.Exec(query, event.Headliner, event.Openers, event.ImageURL, event.LocationName, event.LocationURL, event.TicketURL, event.StartTime, event.EndTime, event.ID); err != nil {
 		return nil, lib.ErrDB
 	}
 	return event, nil

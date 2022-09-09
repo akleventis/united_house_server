@@ -20,7 +20,7 @@ func NewHandler(db *uhp_db.UhpDB) *Handler {
 	}
 }
 
-// getProducts returns json array of all products
+// GetProducts returns json array of all products
 func (h *Handler) GetProducts() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		products, err := h.db.GetProducts()
@@ -44,7 +44,7 @@ func (h *Handler) GetProducts() http.HandlerFunc {
 	}
 }
 
-// ADMIN ONLY: GetProduct retrieves a product using and id
+// GetProduct retrieves a product using and id
 func (h *Handler) GetProduct() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
@@ -78,7 +78,7 @@ func (h *Handler) GetProduct() http.HandlerFunc {
 	}
 }
 
-// ADMIN ONLY: CreateProduct creates a product based on provided fields (id, name, size, price, quantity)
+// CreateProduct creates a product based on provided fields (id, name, size, price, quantity)
 func (h *Handler) CreateProduct() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var p uhp_db.Product
@@ -95,7 +95,7 @@ func (h *Handler) CreateProduct() http.HandlerFunc {
 	}
 }
 
-// ADMIN ONLY: UpdateProduct updates an existing product based on provided fields (name, size, price, quantity)
+// UpdateProduct updates an existing product based on provided fields (name, size, price, quantity)
 func (h *Handler) UpdateProduct() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// grab id from url
@@ -134,7 +134,7 @@ func (h *Handler) UpdateProduct() http.HandlerFunc {
 	}
 }
 
-// ADMIN ONLY: DeleteProduct deletes an existing product using id
+// DeleteProduct deletes an existing product using id
 func (h *Handler) DeleteProduct() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)

@@ -7,6 +7,7 @@ import (
 	"errors"
 
 	"github.com/akleventis/united_house_server/lib"
+	log "github.com/sirupsen/logrus"
 )
 
 type FeaturedArtist struct {
@@ -62,8 +63,9 @@ func (uDB *UhpDB) GetFeaturedArtist(id string) (*FeaturedArtist, error) {
 }
 
 func (uDB *UhpDB) CreateFeaturedArtist(song FeaturedArtist) (*FeaturedArtist, error) {
-	query := `INSERT INTO featured_artists_t (name, redirect_url, soundcloud_iframe_url, sequence) VALUES ($1, $2, $3, $4);`
+	query := `INSERT INTO featured_artists_t (artist, soundcloud_iframe_url, sequence) VALUES ($1, $2, $3);`
 	if _, err := uDB.Exec(query, song.Artist, song.SoundcloudURL, song.Sequence); err != nil {
+		log.Error(err)
 		return nil, lib.ErrDB
 	}
 	// Grab auto-generated id
@@ -75,8 +77,9 @@ func (uDB *UhpDB) CreateFeaturedArtist(song FeaturedArtist) (*FeaturedArtist, er
 }
 
 func (uDB *UhpDB) UpdateFeaturedArtist(song *FeaturedArtist) (*FeaturedArtist, error) {
-	query := `UPDATE featured_artists_t SET name=$1, redirect_url=$2, soundcloud_iframe_url=$3, sequence=$4 WHERE id=$5;`
+	query := `UPDATE featured_artists_t SET artist=$1, soundcloud_iframe_url=$2, sequence=$3 WHERE id=$4;`
 	if _, err := uDB.Exec(query, song.Artist, song.SoundcloudURL, song.Sequence, song.ID); err != nil {
+		log.Error(err)
 		return nil, lib.ErrDB
 	}
 	return song, nil

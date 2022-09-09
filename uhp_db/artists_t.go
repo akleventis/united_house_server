@@ -4,6 +4,7 @@ import (
 	"database/sql"
 
 	"github.com/akleventis/united_house_server/lib"
+	log "github.com/sirupsen/logrus"
 )
 
 type Artist struct {
@@ -26,13 +27,13 @@ func (uDB *UhpDB) GetArtists() ([]Artist, error) {
 	query := `SELECT * FROM artists_t;`
 	rows, err := uDB.Query(query)
 	if err != nil {
-		// TODO: Maybe move lib.ErrDB to handler??
 		return nil, lib.ErrDB
 	}
 	defer rows.Close()
 	for rows.Next() {
 		artist := Artist{}
 		if err := rows.Scan(&artist.ID, &artist.Name, &artist.Url); err != nil {
+			log.Error(err)
 			return nil, lib.ErrDB
 		}
 		artists = append(artists, artist)

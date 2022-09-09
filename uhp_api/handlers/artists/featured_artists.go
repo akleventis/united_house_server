@@ -10,6 +10,16 @@ import (
 	"github.com/gorilla/mux"
 )
 
+type Handler struct {
+	db *uhp_db.UhpDB
+}
+
+func NewHandler(db *uhp_db.UhpDB) *Handler {
+	return &Handler{
+		db: db,
+	}
+}
+
 func (h *Handler) GetFeaturedArtists() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		songs, err := h.db.GetFeaturedArtists()
