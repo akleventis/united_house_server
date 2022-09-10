@@ -27,6 +27,7 @@ func (uDB *UhpDB) GetArtists() ([]Artist, error) {
 	query := `SELECT * FROM artists_t;`
 	rows, err := uDB.Query(query)
 	if err != nil {
+		log.Error(err)
 		return nil, lib.ErrDB
 	}
 	defer rows.Close()
@@ -39,6 +40,7 @@ func (uDB *UhpDB) GetArtists() ([]Artist, error) {
 		artists = append(artists, artist)
 	}
 	if err := rows.Err(); err != nil {
+		log.Error(err)
 		return nil, err
 	}
 	return artists, nil
@@ -52,6 +54,7 @@ func (uDB *UhpDB) GetArtist(id string) (*Artist, error) {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
+		log.Error(err)
 		return nil, lib.ErrDB
 	}
 	return &artist, nil
@@ -60,6 +63,7 @@ func (uDB *UhpDB) GetArtist(id string) (*Artist, error) {
 func (uDB *UhpDB) CreateArtist(artist Artist) (*Artist, error) {
 	query := `INSERT INTO artists_t (name, url) VALUES ($1, $2);`
 	if _, err := uDB.Exec(query, artist.Name, artist.Url); err != nil {
+		log.Error(err)
 		return nil, lib.ErrDB
 	}
 	// Grab auto-generated id
@@ -73,6 +77,7 @@ func (uDB *UhpDB) CreateArtist(artist Artist) (*Artist, error) {
 func (uDB *UhpDB) UpdateArtist(artist *Artist) (*Artist, error) {
 	query := `UPDATE artists_t SET name=$1, url=$2 WHERE id=$3`
 	if _, err := uDB.Exec(query, artist.Name, artist.Url, artist.ID); err != nil {
+		log.Error(err)
 		return nil, lib.ErrDB
 	}
 	return artist, nil
@@ -81,6 +86,7 @@ func (uDB *UhpDB) UpdateArtist(artist *Artist) (*Artist, error) {
 func (uDB *UhpDB) DeleteArtist(id string) error {
 	query := `DELETE FROM artists_t WHERE id=$1;`
 	if _, err := uDB.Exec(query, id); err != nil {
+		log.Error(err)
 		return lib.ErrDB
 	}
 	return nil

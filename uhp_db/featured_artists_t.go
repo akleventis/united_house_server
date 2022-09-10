@@ -38,6 +38,7 @@ func (uDB *UhpDB) GetFeaturedArtists() ([]FeaturedArtist, error) {
 	for rows.Next() {
 		song := FeaturedArtist{}
 		if err := rows.Scan(&song.ID, &song.Artist, &song.SoundcloudURL, &song.Sequence); err != nil {
+			log.Info(err)
 			return nil, lib.ErrDB
 		}
 		songs = append(songs, song)
@@ -56,6 +57,7 @@ func (uDB *UhpDB) GetFeaturedArtist(id string) (*FeaturedArtist, error) {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
+		log.Error(err)
 		return nil, lib.ErrDB
 	}
 
@@ -88,6 +90,7 @@ func (uDB *UhpDB) UpdateFeaturedArtist(song *FeaturedArtist) (*FeaturedArtist, e
 func (uDB *UhpDB) DeleteFeaturedArtist(id string) error {
 	query := `DELETE FROM featured_artists_t WHERE id=$1;`
 	if _, err := uDB.Exec(query, id); err != nil {
+		log.Error(err)
 		return lib.ErrDB
 	}
 	return nil

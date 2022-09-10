@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	lib "github.com/akleventis/united_house_server/lib"
+	log "github.com/sirupsen/logrus"
 )
 
 type Product struct {
@@ -36,6 +37,7 @@ func (uDB *UhpDB) GetProduct(id string) (*Product, error) {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
+		log.Error(err)
 		return nil, lib.ErrDB
 	}
 	return &p, nil
@@ -46,6 +48,7 @@ func (uDB *UhpDB) UpdateProduct(p *Product) (*Product, error) {
 	// string format price 2 decimal precision
 	query := fmt.Sprintf(`UPDATE merch_t SET name=$1, size=$2, price=%.2f, quantity=$3 WHERE id=$4;`, p.Price)
 	if _, err := uDB.Exec(query, p.Name, p.Size, p.Quantity, p.ID); err != nil {
+		log.Error(err)
 		return nil, lib.ErrDB
 	}
 	return p, nil
@@ -55,6 +58,7 @@ func (uDB *UhpDB) UpdateProduct(p *Product) (*Product, error) {
 func (uDB *UhpDB) DeleteProduct(id string) error {
 	query := `DELETE FROM merch_t WHERE id=$1;`
 	if _, err := uDB.Exec(query, id); err != nil {
+		log.Error(err)
 		return lib.ErrDB
 	}
 	return nil
@@ -64,6 +68,7 @@ func (uDB *UhpDB) DeleteProduct(id string) error {
 func (uDB *UhpDB) CreateProduct(p Product) (*Product, error) {
 	query := `INSERT INTO merch_t (id, name, size, price, quantity) VALUES ($1, $2, $3, $4, $5, $6);`
 	if _, err := uDB.Exec(query, p.ID, p.Name, p.Size, p.Price, p.Quantity); err != nil {
+		log.Error(err)
 		return nil, lib.ErrDB
 	}
 	return &p, nil
@@ -76,6 +81,7 @@ func (uDB *UhpDB) GetProducts() ([]Product, error) {
 	query := `SELECT * FROM merch_t;`
 	rows, err := uDB.Query(query)
 	if err != nil {
+		log.Error(err)
 		return nil, lib.ErrDB
 	}
 	defer rows.Close()
@@ -83,6 +89,7 @@ func (uDB *UhpDB) GetProducts() ([]Product, error) {
 		p := Product{}
 		err := rows.Scan(&p.ID, &p.Name, &p.Size, &p.Price, &p.Quantity)
 		if err != nil {
+			log.Error(err)
 			return nil, lib.ErrDB
 		}
 
@@ -90,6 +97,7 @@ func (uDB *UhpDB) GetProducts() ([]Product, error) {
 	}
 	err = rows.Err()
 	if err != nil {
+		log.Error(err)
 		return nil, lib.ErrDB
 	}
 
@@ -104,6 +112,7 @@ func (uDB *UhpDB) GetOrder(id string, quantity int) (*Product, error) {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
+		log.Error(err)
 		return nil, lib.ErrDB
 	}
 	// if req quantity > in stock return product and error so we can tell front end how much in-stock
@@ -119,6 +128,7 @@ func (uDB *UhpDB) GetOrder(id string, quantity int) (*Product, error) {
 func (uDB *UhpDB) UpdateQuantity(id string, quantity int) error {
 	query := `UPDATE merch_t SET quantity=quantity-$1 WHERE id=$2;`
 	if _, err := uDB.Exec(query, quantity, id); err != nil {
+		log.Error(err)
 		return lib.ErrDB
 	}
 	return nil

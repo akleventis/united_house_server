@@ -46,6 +46,7 @@ func (uDB *UhpDB) GetEvents() ([]Event, error) {
 	query := `SELECT * FROM events_t;`
 	rows, err := uDB.Query(query)
 	if err != nil {
+		log.Error(err)
 		return nil, lib.ErrDB
 	}
 	defer rows.Close()
@@ -59,6 +60,7 @@ func (uDB *UhpDB) GetEvents() ([]Event, error) {
 		events = append(events, event)
 	}
 	if err := rows.Err(); err != nil {
+		log.Error(err)
 		return nil, lib.ErrDB
 	}
 
@@ -73,6 +75,7 @@ func (uDB *UhpDB) GetEvent(id string) (*Event, error) {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
+		log.Error(err)
 		return nil, lib.ErrDB
 	}
 
@@ -96,6 +99,7 @@ func (uDB *UhpDB) CreateEvent(event Event) (*Event, error) {
 func (uDB *UhpDB) UpdateEvent(event *Event) (*Event, error) {
 	query := `UPDATE events_t SET headliner=$1, openers=$2, image_url=$3, location_name=$4, location_url=$5, ticket_url=$6, start_time=$7, end_time=$8 WHERE id=$9;`
 	if _, err := uDB.Exec(query, event.Headliner, event.Openers, event.ImageURL, event.LocationName, event.LocationURL, event.TicketURL, event.StartTime, event.EndTime, event.ID); err != nil {
+		log.Error(err)
 		return nil, lib.ErrDB
 	}
 	return event, nil
@@ -104,6 +108,7 @@ func (uDB *UhpDB) UpdateEvent(event *Event) (*Event, error) {
 func (uDB *UhpDB) DeleteEvent(id string) error {
 	query := `DELETE FROM events_t WHERE id=$1;`
 	if _, err := uDB.Exec(query, id); err != nil {
+		log.Error(err)
 		return lib.ErrDB
 	}
 	return nil
