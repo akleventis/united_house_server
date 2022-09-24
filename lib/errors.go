@@ -8,9 +8,9 @@ var (
 	ErrDB         = errors.New("DB_ERROR")
 
 	// 400s
-	ErrInvalidTokenFormat = errors.New("INVALID_TOKEN_FORMAT")
-	ErrInvalidToken       = errors.New("INVALID_TOKEN")
-	ErrInvalidID          = errors.New("INVALID_ID")
+	ErrInvalidToken = errors.New("INVALID_TOKEN")
+	ErrTokenExpired = errors.New("EXPIRED_TOKEN")
+	ErrInvalidID    = errors.New("INVALID_ID")
 
 	// 500s
 	ErrInvalidArgJsonBody = errors.New("INVALID_JSON")

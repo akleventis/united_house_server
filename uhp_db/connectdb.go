@@ -14,7 +14,6 @@ type UhpDB struct {
 	*sql.DB
 }
 
-// uhpdb=# \d merch_t
 //  id       | character varying(50) |           | not null |
 //  name     | character varying(50) |           | not null |
 //  size     | character varying(50) |           | not null |
@@ -33,7 +32,6 @@ func (db *UhpDB) createMerchTable() error {
 	return nil
 }
 
-// uhpdb=# \d artists_t;
 // Column |         Type          | Collation | Nullable |                Default
 // --------+-----------------------+-----------+----------+---------------------------------------
 //  id     | integer               |           | not null | nextval('artists_t_id_seq'::regclass)
@@ -55,7 +53,6 @@ func (db *UhpDB) createArtistsTable() error {
 	return nil
 }
 
-// uhpdb=# \d featured_artists_t;
 // Column         |         Type          | Collation | Nullable |                    Default
 // -----------------------+-----------------------+-----------+----------+------------------------------------------------
 //  id                    | integer               |           | not null | nextval('featured_artists_t_id_seq'::regclass)
@@ -76,11 +73,10 @@ func (db *UhpDB) createFeaturedArtistsTable() error {
 	return nil
 }
 
-// uhpdb=# \d events_t;
-// Column     |            Type             | Collation | Nullable |               Default
+// Column         |            Type             | Collation | Nullable |               Default
 // ---------------+-----------------------------+-----------+----------+--------------------------------------
 //  id            | integer                     |           | not null | nextval('events_t_id_seq'::regclass)
-//  headliner  | json                        |           | not null |
+//  headliner 	  | json                        |           | not null |
 //  openers       | json                        |           |          |
 //  image_url     | character varying(50)       |           | not null |
 //  location_name | character varying(50)       |           | not null |
@@ -101,6 +97,22 @@ func (db *UhpDB) createEventsTable() error {
 		ticket_url VARCHAR( 250 ), 
 		start_time TIMESTAMP without time zone,
 		end_time TIMESTAMP without time zone
+		)`); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Column    | Type | Collation | Nullable | Default
+// ----------+------+-----------+----------+---------
+// username  | text |           | not null |
+// password  | text |           |          |
+// Indexes:
+//   "auth_t_pkey" PRIMARY KEY, btree (username)
+func (db *UhpDB) createAuthTable() error {
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS auth_t (
+		username text PRIMARY KEY,
+		password text
 		)`); err != nil {
 		return err
 	}
@@ -160,6 +172,9 @@ func Open() (*UhpDB, error) {
 		return nil, err
 	}
 	if err = pDB.createEventsTable(); err != nil {
+		return nil, err
+	}
+	if err = pDB.createAuthTable(); err != nil {
 		return nil, err
 	}
 

@@ -5,7 +5,10 @@ import (
 	"os"
 
 	m "github.com/akleventis/united_house_server/middleware"
+
+	// TODO: figure out why imports only work with named variable
 	artists "github.com/akleventis/united_house_server/uhp_api/handlers/artists"
+	auth "github.com/akleventis/united_house_server/uhp_api/handlers/auth"
 	checkout "github.com/akleventis/united_house_server/uhp_api/handlers/checkout"
 	email "github.com/akleventis/united_house_server/uhp_api/handlers/email"
 	events "github.com/akleventis/united_house_server/uhp_api/handlers/events"
@@ -104,6 +107,10 @@ func main() {
 	router.HandleFunc("/images", m.Limit(m.Auth(images.UploadImage()), m.RL10)).Methods("POST")   // admin
 	router.HandleFunc("/images", m.Limit(m.Auth(images.DeleteImage()), m.RL10)).Methods("DELETE") // admin
 
-	handler := cors.Default().Handler(router)
+	// admin sign-in
+	auth := auth.NewHandler(db)
+	router.HandleFunc("/auth", auth.SignIn()).Methods("POST")
+
+	handler := cors.AllowAll().Handler(router)
 	http.ListenAndServe(":5001", handler)
 }
