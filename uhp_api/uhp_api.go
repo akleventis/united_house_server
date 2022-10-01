@@ -77,7 +77,7 @@ func main() {
 
 	// events
 	events := events.NewHandler(db)
-	router.HandleFunc("/events", m.Limit(events.GetEvents(), m.RL50)).Methods("GET")
+	router.HandleFunc("/events", m.Limit(events.GetEvents(), m.RL100)).Methods("GET")
 	router.HandleFunc("/event/{id}", m.Limit(events.GetEvent(), m.RL50)).Methods("GET")
 	router.HandleFunc("/event", m.Limit(m.Auth(events.CreateEvent()), m.RL30)).Methods("POST")        // admin
 	router.HandleFunc("/event/{id}", m.Limit(m.Auth(events.UpdateEvent()), m.RL30)).Methods("PATCH")  // admin
@@ -85,9 +85,9 @@ func main() {
 
 	// featured artist soundcloud iframe
 	artists := artists.NewHandler(db)
-	router.HandleFunc("/artist", m.Limit(artists.GetArtists(), m.RL50)).Methods("GET")
-	router.HandleFunc("/artist", m.Limit(m.Auth(artists.CreateArtist()), m.RL30)).Methods("POST")         // admin
-	router.HandleFunc("/artists", m.Limit(m.Auth(artists.GetArtist()), m.RL50)).Methods("GET")            // admin
+	router.HandleFunc("/artist", m.Limit(artists.GetArtist(), m.RL50)).Methods("GET")
+	router.HandleFunc("/artist", m.Limit(m.Auth(artists.CreateArtist()), m.RL30)).Methods("POST") // admin
+	router.HandleFunc("/artists", m.Limit(artists.GetArtists(), m.RL50)).Methods("GET")
 	router.HandleFunc("/artists/{id}", m.Limit(m.Auth(artists.UpdateArtist()), m.RL30)).Methods("PATCH")  // admin
 	router.HandleFunc("/artists/{id}", m.Limit(m.Auth(artists.DeleteArtist()), m.RL30)).Methods("DELETE") // admin
 
