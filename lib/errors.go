@@ -7,6 +7,10 @@ var (
 	ErrOutOfStock = errors.New("OUT_OF_STOCK")
 	ErrDB         = errors.New("DB_ERROR")
 
+	// products
+	ErrQuantity        = errors.New("QUANTITY_ERR")
+	ErrFetchingProduct = errors.New("STRIPE_PRODUCT_ERR")
+
 	// 400s
 	ErrInvalidToken = errors.New("INVALID_TOKEN")
 	ErrTokenExpired = errors.New("EXPIRED_TOKEN")
@@ -20,11 +24,4 @@ var (
 
 	// Email
 	ErrEmail = errors.New("EMAIL_ERROR")
-
-	// IMAGES
-	ErrImageFile     = errors.New("IMAGE_FILE_ERROR")
-	ErrImageTooLarge = errors.New("IMAGE_MUST_BE_LESS_THAN_3_MEGABYTES")
-	ErrFormValue     = errors.New("INVALID_FORM_VALUE")
-	ErrFileType      = errors.New("FILE_TYPE_NOT_ALLOWED")
-	ErrNoImage       = errors.New("IMAGE_NOT_FOUND")
 )
