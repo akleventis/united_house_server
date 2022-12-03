@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/akleventis/united_house_server/lib"
 	"github.com/mailjet/mailjet-apiv3-go"
@@ -28,6 +29,7 @@ type Email struct {
 
 func (h *Handler) SendEmail() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		uhpEmailAddress := os.Getenv("UHP_EMAIL")
 		var email Email
 		if err := json.NewDecoder(r.Body).Decode(&email); err != nil {
 			http.Error(w, lib.ErrInvalidArgJsonBody.Error(), http.StatusBadRequest)
@@ -36,12 +38,12 @@ func (h *Handler) SendEmail() http.HandlerFunc {
 		messagesInfo := []mailjet.InfoMessagesV31{
 			{
 				From: &mailjet.RecipientV31{
-					Email: "unitedhouseproductions@gmail.com",
+					Email: uhpEmailAddress,
 					Name:  "Booking",
 				},
 				To: &mailjet.RecipientsV31{
 					mailjet.RecipientV31{
-						Email: "unitedhouseproductions@gmail.com",
+						Email: uhpEmailAddress,
 						Name:  "Paul",
 					},
 				},

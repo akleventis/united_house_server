@@ -8,24 +8,20 @@ import (
 	"strconv"
 
 	"github.com/akleventis/united_house_server/lib"
-	"github.com/akleventis/united_house_server/uhp_db"
 
 	"github.com/stripe/stripe-go"
 
 	stripev73 "github.com/stripe/stripe-go/v73"
-	session "github.com/stripe/stripe-go/v73/checkout/session"
-	price "github.com/stripe/stripe-go/v73/price"
-	product "github.com/stripe/stripe-go/v73/product"
+	"github.com/stripe/stripe-go/v73/checkout/session"
+	"github.com/stripe/stripe-go/v73/price"
+	"github.com/stripe/stripe-go/v73/product"
 )
 
 type Handler struct {
-	db *uhp_db.UhpDB
 }
 
-func NewHandler(db *uhp_db.UhpDB) *Handler {
-	return &Handler{
-		db: db,
-	}
+func NewHandler() *Handler {
+	return &Handler{}
 }
 
 type ProductV2 struct {
@@ -80,7 +76,6 @@ func (h *Handler) GetProducts() http.HandlerFunc {
 				ImageURL: p.Product.Images[0],
 				Price:    p.UnitAmount,
 				Quantity: quantity,
-				// PriceID:  p.ID,
 			}
 			productInfo = append(productInfo, product)
 		}
@@ -205,62 +200,3 @@ func (h *Handler) HandleCheckout() http.HandlerFunc {
 		lib.ApiResponse(w, http.StatusOK, res)
 	}
 }
-
-// WEBHOOK
-// TODO: update webhook to send me an email upon purchases
-
-// handleWebhook() listens for Checkout Session Confirmation then Update Inventory accordingly
-// func (h *Handler) HandleWebhook() http.HandlerFunc {
-// 	return func(w http.ResponseWriter, req *http.Request) {
-// 		const MaxBodyBytes = int64(65536)
-// 		req.Body = http.MaxBytesReader(w, req.Body, MaxBodyBytes)
-// 		payload, err := ioutil.ReadAll(req.Body)
-// 		if err != nil {
-// 			fmt.Fprintf(os.Stderr, "Error reading request body: %v\n", err)
-// 			http.Error(w, err.Error(), http.StatusServiceUnavailable)
-// 			return
-// 		}
-
-// Stripe CLI webhook secret for testing your endpoint locally.
-// create for prod https://dashboard.stripe.com/webhooks
-// endpointSecret := os.Getenv("WHSEC")
-// Pass the request body and Stripe-Signature header to ConstructEvent, along with the webhook signing key.
-// event, err := webhook.ConstructEvent(payload, req.Header.Get("Stripe-Signature"),
-// 	endpointSecret)
-// if err != nil {
-// 	log.Errorf("Error verifying webhook signature: %v\n", err)
-// 	http.Error(w, err.Error(), http.StatusBadRequest)
-// 	return
-// }
-
-// Unmarshal the event data into an appropriate struct depending on its Type
-// if event.Type == "checkout.session.completed" {
-// Grab Session Data
-// var sesh stripe.CheckoutSession
-// err = json.Unmarshal(event.Data.Raw, &sesh)
-// if err != nil {
-// 	log.Errorf("Error parsing webhook JSON: %v\n", err)
-// 	http.Error(w, err.Error(), http.StatusBadRequest)
-// 	return
-// }
-
-// Grab each session line items Product ID and Quantity
-// params := &stripe.CheckoutSessionListLineItemsParams{}
-// i := session.ListLineItems(sesh.ID, params)
-// for i.Next() {
-// li := i.LineItem()
-
-// id := li.Description // stripe product ID
-
-// quantity := int(li.Quantity)
-
-// if err := h.db.UpdateQuantity(id, quantity); err != nil {
-// 	http.Error(w, lib.ErrDB.Error(), http.StatusInternalServerError)
-// 	return
-// }
-// }
-// }
-// 		log.Info("")
-// 		w.WriteHeader(http.StatusOK)
-// 	}
-// }
