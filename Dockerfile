@@ -8,7 +8,7 @@ COPY go.* ./
 RUN go mod download
 
 # copy relevant folders over
-COPY .env ./.env
+# COPY .env ./.env
 COPY lib/ ./lib/
 COPY middleware/ ./middleware/
 COPY uhp_api/ ./uhp_api/
