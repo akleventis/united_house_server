@@ -21,17 +21,19 @@ func main() {
 	// }
 
 	stripev73.Key = os.Getenv("STRIPE_KEY")
+	clientURL := os.Getenv("CLIENT_URL")
+	uhpEmail := os.Getenv("UHP_EMAIL")
 
 	router := mux.NewRouter()
 
 	// stripe
-	checkout := checkout.NewHandler()
+	checkout := checkout.NewHandler(clientURL)
 	router.HandleFunc("/checkout", m.Limit(checkout.HandleCheckout(), m.RL10)).Methods("POST")
 	router.HandleFunc("/products", m.Limit(checkout.GetProducts(), m.RL50)).Methods("GET")
 
 	// email
 	mailjetClient := mailjet.NewMailjetClient(os.Getenv("MAILJET_KEY"), os.Getenv("MAILJET_SECRET"))
-	email := email.NewHandler(mailjetClient)
+	email := email.NewHandler(mailjetClient, uhpEmail)
 	router.HandleFunc("/mail", m.Limit(email.SendEmail(), m.RL5)).Methods("POST")
 
 	handler := cors.Default().Handler(router)

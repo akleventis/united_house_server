@@ -16,10 +16,13 @@ import (
 )
 
 type Handler struct {
+	clientURL string
 }
 
-func NewHandler() *Handler {
-	return &Handler{}
+func NewHandler(clientURL string) *Handler {
+	return &Handler{
+		clientURL: clientURL,
+	}
 }
 
 type ProductV2 struct {
@@ -141,12 +144,12 @@ func createLineItems(products []*ProductV2) []*stripev73.CheckoutSessionLineItem
 }
 
 // createCheckoutSession creates and returns a stripe checkout session object
-func createCheckoutSession(cli []*stripev73.CheckoutSessionLineItemParams) (*stripev73.CheckoutSession, error) {
+func (h *Handler) createCheckoutSession(cli []*stripev73.CheckoutSessionLineItemParams) (*stripev73.CheckoutSession, error) {
 	params := &stripev73.CheckoutSessionParams{
 		Mode:               stripev73.String(string(stripe.CheckoutSessionModePayment)),
 		PaymentMethodTypes: []*string{stripev73.String("card")},
-		SuccessURL:         stripev73.String(os.Getenv("CLIENT_URL")),
-		CancelURL:          stripev73.String(os.Getenv("CLIENT_URL")),
+		SuccessURL:         stripev73.String(h.clientURL),
+		CancelURL:          stripev73.String(h.clientURL),
 		LineItems:          cli,
 	}
 	stripe.Key = os.Getenv("STRIPE_KEY")
@@ -185,7 +188,7 @@ func (h *Handler) HandleCheckout() http.HandlerFunc {
 
 		checkoutLineItems := createLineItems(products)
 		// create checkout session
-		sesh, err := createCheckoutSession(checkoutLineItems)
+		sesh, err := h.createCheckoutSession(checkoutLineItems)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
