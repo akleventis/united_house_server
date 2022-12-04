@@ -1,4 +1,4 @@
-name: united-house
+name: united-house-server
 region: nyc
 services:
   envs:
@@ -6,12 +6,12 @@ services:
     value: ${STRIPE_KEY}
   - key: CLIENT_URL
     value: ${CLIENT_URL}
-  - key: SERVER_URL
-    value: ${SERVER_URL}
   - key: MAILJET_KEY
     value: ${MAILJET_KEY}
   - key: MAILJET_SECRET
     value: ${MAILJET_SECRET}
+  - key: UHP_EMAIL
+    value: ${UHP_EMAIL}
   github:
     branch: main
     deploy_on_push: true
