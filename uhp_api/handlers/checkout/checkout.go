@@ -8,9 +8,7 @@ import (
 	"strconv"
 
 	"github.com/akleventis/united_house_server/lib"
-
 	"github.com/stripe/stripe-go"
-
 	stripev73 "github.com/stripe/stripe-go/v73"
 	"github.com/stripe/stripe-go/v73/checkout/session"
 	"github.com/stripe/stripe-go/v73/price"
