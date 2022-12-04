@@ -8,7 +8,6 @@ import (
 	checkout "github.com/akleventis/united_house_server/uhp_api/handlers/checkout"
 	email "github.com/akleventis/united_house_server/uhp_api/handlers/email"
 	"github.com/gorilla/mux"
-	"github.com/joho/godotenv"
 	"github.com/mailjet/mailjet-apiv3-go"
 	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
@@ -17,9 +16,9 @@ import (
 
 func main() {
 	port := ":8080"
-	if err := godotenv.Load("../.env"); err != nil {
-		log.Fatal("Error loading .env file")
-	}
+	// if err := godotenv.Load("../.env"); err != nil {
+	// 	log.Fatal("Error loading .env file")
+	// }
 
 	stripev73.Key = os.Getenv("STRIPE_KEY")
 
