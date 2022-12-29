@@ -16,13 +16,10 @@ import (
 )
 
 type Handler struct {
-	clientURL string
 }
 
-func NewHandler(clientURL string) *Handler {
-	return &Handler{
-		clientURL: clientURL,
-	}
+func NewHandler() *Handler {
+	return &Handler{}
 }
 
 type ProductV2 struct {
@@ -148,8 +145,8 @@ func (h *Handler) createCheckoutSession(cli []*stripev73.CheckoutSessionLineItem
 	params := &stripev73.CheckoutSessionParams{
 		Mode:               stripev73.String(string(stripe.CheckoutSessionModePayment)),
 		PaymentMethodTypes: []*string{stripev73.String("card")},
-		SuccessURL:         stripev73.String(h.clientURL),
-		CancelURL:          stripev73.String(h.clientURL),
+		SuccessURL:         stripev73.String(os.Getenv("CLIENT_URL")),
+		CancelURL:          stripev73.String(os.Getenv("CLIENT_URL")),
 		LineItems:          cli,
 	}
 	stripe.Key = os.Getenv("STRIPE_KEY")

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/akleventis/united_house_server/lib"
 	"github.com/mailjet/mailjet-apiv3-go"
@@ -15,10 +16,9 @@ type Handler struct {
 	uhpEmail string
 }
 
-func NewHandler(mc *mailjet.Client, uhpEmail string) *Handler {
+func NewHandler(mc *mailjet.Client) *Handler {
 	return &Handler{
-		mc:       mc,
-		uhpEmail: uhpEmail,
+		mc: mc,
 	}
 }
 
@@ -43,7 +43,7 @@ func (h *Handler) SendEmail() http.HandlerFunc {
 				},
 				To: &mailjet.RecipientsV31{
 					mailjet.RecipientV31{
-						Email: h.uhpEmail,
+						Email: os.Getenv("UHP_EMAIL"),
 						Name:  "Paul",
 					},
 				},

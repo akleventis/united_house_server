@@ -8,6 +8,7 @@ import (
 	checkout "github.com/akleventis/united_house_server/uhp_api/handlers/checkout"
 	email "github.com/akleventis/united_house_server/uhp_api/handlers/email"
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 	"github.com/mailjet/mailjet-apiv3-go"
 	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
@@ -16,24 +17,24 @@ import (
 
 func main() {
 	port := ":8080"
-	// if err := godotenv.Load("../.env"); err != nil {
-	// 	log.Fatal("Error loading .env file")
-	// }
+
+	// comment this out upon deployment: use env variables in app platform => https://docs.digitalocean.com/products/app-platform/how-to/use-environment-variables/#using-bindable-variables-within-environment-variables
+	if err := godotenv.Load("../.env"); err != nil {
+		log.Fatal("Error loading .env file")
+	}
 
 	stripev73.Key = os.Getenv("STRIPE_KEY")
-	clientURL := os.Getenv("CLIENT_URL")
-	uhpEmail := os.Getenv("UHP_EMAIL")
 
 	router := mux.NewRouter()
 
 	// stripe
-	checkout := checkout.NewHandler(clientURL)
-	router.HandleFunc("/checkout", m.Limit(checkout.HandleCheckout(), m.RL10)).Methods("POST")
+	checkout := checkout.NewHandler()
+	router.HandleFunc("/checkout", m.Limit(checkout.HandleCheckout(), m.RL50)).Methods("POST")
 	router.HandleFunc("/products", m.Limit(checkout.GetProducts(), m.RL50)).Methods("GET")
 
 	// email
 	mailjetClient := mailjet.NewMailjetClient(os.Getenv("MAILJET_KEY"), os.Getenv("MAILJET_SECRET"))
-	email := email.NewHandler(mailjetClient, uhpEmail)
+	email := email.NewHandler(mailjetClient)
 	router.HandleFunc("/mail", m.Limit(email.SendEmail(), m.RL5)).Methods("POST")
 
 	handler := cors.Default().Handler(router)
